@@ -2,8 +2,8 @@
  * 人脸采集组件
  */
 import { useState, useRef, useEffect } from 'react';
-import { Modal, Button, Space, Alert, Progress, Image } from 'antd';
-import { CameraOutlined, DeleteOutlined, CheckOutlined } from '@ant-design/icons';
+import { Modal, Button, Space, Alert, Progress, Image, Upload, message as antMessage } from 'antd';
+import { CameraOutlined, DeleteOutlined, CheckOutlined, UploadOutlined } from '@ant-design/icons';
 
 interface FaceCaptureProps {
   open: boolean;
@@ -74,15 +74,59 @@ const FaceCapture = ({
     }
   };
 
-  // 删除照片
-  const deleteImage = (index: number) => {
+  // 删除图片
+  const handleDelete = (index: number) => {
     setCapturedImages(capturedImages.filter((_, i) => i !== index));
+  };
+
+  // 文件上传处理（支持批量）
+  const handleFileUpload = (file: File, fileList: File[]) => {
+    // 检查剩余可上传数量
+    const remainingSlots = maxImages - capturedImages.length;
+    
+    if (remainingSlots <= 0) {
+      antMessage.warning(`最多只能上传 ${maxImages} 张照片`);
+      return false;
+    }
+
+    // 限制本次上传的文件数量
+    const filesToUpload = fileList.slice(0, remainingSlots);
+    
+    if (fileList.length > remainingSlots) {
+      antMessage.warning(`最多还能上传 ${remainingSlots} 张照片，已自动选择前 ${remainingSlots} 张`);
+    }
+
+    // 批量读取文件
+    const newImages: string[] = [];
+    let loadedCount = 0;
+
+    filesToUpload.forEach((f) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const base64 = e.target?.result as string;
+        newImages.push(base64);
+        loadedCount++;
+
+        // 所有文件都读取完成后更新状态
+        if (loadedCount === filesToUpload.length) {
+          setCapturedImages([...capturedImages, ...newImages]);
+          antMessage.success(`成功上传 ${newImages.length} 张图片`);
+        }
+      };
+      reader.onerror = () => {
+        loadedCount++;
+        antMessage.error(`图片 ${f.name} 读取失败`);
+      };
+      reader.readAsDataURL(f);
+    });
+
+    return false; // 阻止默认上传行为
   };
 
   // 完成采集
   const handleComplete = () => {
     if (capturedImages.length < minImages) {
-      alert(`至少需要采集 ${minImages} 张照片`);
+      antMessage.warning(`至少需要采集 ${minImages} 张照片`);
       return;
     }
     stopCamera();
@@ -136,7 +180,7 @@ const FaceCapture = ({
     >
       <Alert
         message="采集说明"
-        description={`请从不同角度拍摄您的面部照片，至少需要 ${minImages} 张，最多 ${maxImages} 张。确保面部清晰可见，光线充足。`}
+        description={`请从不同角度拍摄您的面部照片，至少需要 ${minImages} 张，最多 ${maxImages} 张。确保面部清晰可见，光线充足。支持批量上传多张图片。`}
         type="info"
         showIcon
         style={{ marginBottom: 16 }}
@@ -169,15 +213,31 @@ const FaceCapture = ({
             <canvas ref={canvasRef} style={{ display: 'none' }} />
           </div>
           <div style={{ marginTop: 16, textAlign: 'center' }}>
-            <Button
-              type="primary"
-              size="large"
-              icon={<CameraOutlined />}
-              onClick={captureImage}
-              disabled={!capturing || capturedImages.length >= maxImages}
-            >
-              拍照 ({capturedImages.length}/{maxImages})
-            </Button>
+            <Space>
+              <Button
+                type="primary"
+                size="large"
+                icon={<CameraOutlined />}
+                onClick={captureImage}
+                disabled={!capturing || capturedImages.length >= maxImages}
+              >
+                拍照 ({capturedImages.length}/{maxImages})
+              </Button>
+              <Upload
+                accept="image/*"
+                showUploadList={false}
+                beforeUpload={handleFileUpload}
+                multiple
+              >
+                <Button
+                  size="large"
+                  icon={<UploadOutlined />}
+                  disabled={capturedImages.length >= maxImages}
+                >
+                  上传图片
+                </Button>
+              </Upload>
+            </Space>
           </div>
         </div>
 
@@ -213,7 +273,7 @@ const FaceCapture = ({
                     top: 4,
                     right: 4,
                   }}
-                  onClick={() => deleteImage(index)}
+                  onClick={() => handleDelete(index)}
                 />
               </div>
             ))}
