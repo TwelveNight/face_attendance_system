@@ -45,8 +45,9 @@ class Config:
     FACE_SIZE = (160, 160)  # FaceNet输入尺寸
     FACE_MARGIN = 20  # 人脸裁剪边距(像素)
     
-    # 人脸识别阈值
-    FACE_RECOGNITION_THRESHOLD = float(os.getenv('FACE_RECOGNITION_THRESHOLD', 0.6))
+    # 人脸识别阈值（提高阈值以减少误识别）
+    # 对于SVM分类器，这个值会被sigmoid转换，0.7对应较高的决策边界
+    FACE_RECOGNITION_THRESHOLD = float(os.getenv('FACE_RECOGNITION_THRESHOLD', 0.7))
     
     # 用户注册时采集的人脸图像数量
     REGISTER_FACE_COUNT = int(os.getenv('REGISTER_FACE_COUNT', 10))

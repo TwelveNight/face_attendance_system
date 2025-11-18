@@ -142,15 +142,20 @@ class FaceNetRecognizer:
                     )
                     similarities.append(similarity)
                 
-                # 取最大相似度
+                # 取最大相似度（范围 [-1, 1]）
                 max_similarity = float(np.max(similarities))
                 
-                # 检查阈值（余弦相似度范围[-1, 1]，转换到[0, 1]）
-                confidence = (max_similarity + 1) / 2
+                # 余弦相似度阈值（更严格）
+                # 对于单用户，要求至少 0.5 的余弦相似度（表示向量夹角 < 60度）
+                cosine_threshold = 0.5
                 
-                if confidence < Config.FACE_RECOGNITION_THRESHOLD:
+                if max_similarity < cosine_threshold:
+                    # 转换为 [0, 1] 范围用于显示
+                    confidence = (max_similarity + 1) / 2
                     return None, confidence
                 
+                # 通过阈值，返回用户ID和置信度
+                confidence = (max_similarity + 1) / 2
                 return int(unique_labels[0]), confidence
             
             # 多用户情况：使用SVM

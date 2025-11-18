@@ -19,9 +19,16 @@ class FaceService:
         # 确保模型已加载
         if not model_manager.is_loaded():
             model_manager.load_models()
-        
-        self.detector = model_manager.yolo_detector
-        self.recognizer = model_manager.facenet_recognizer
+    
+    @property
+    def detector(self):
+        """获取检测器（动态获取最新实例）"""
+        return model_manager.yolo_detector
+    
+    @property
+    def recognizer(self):
+        """获取识别器（动态获取最新实例）"""
+        return model_manager.facenet_recognizer
     
     def detect_and_recognize(self, image: np.ndarray) -> List[Dict]:
         """
@@ -156,10 +163,9 @@ class FaceService:
                 del old_recognizer
             
             model_manager._facenet_recognizer = FaceNetRecognizer()
-            self.recognizer = model_manager._facenet_recognizer
             
             print(f"✅ 用户 {user_id} 人脸注册成功 ({len(face_images)} 张人脸)")
-            print(f"📊 当前注册用户数: {self.recognizer.get_user_count()}")
+            print(f"📊 当前注册用户数: {model_manager.facenet_recognizer.get_user_count()}")
             return True
         
         except Exception as e:
@@ -218,10 +224,9 @@ class FaceService:
             # 创建新的识别器实例（会从文件重新加载）
             from models.facenet_recognizer import FaceNetRecognizer
             model_manager._facenet_recognizer = FaceNetRecognizer()
-            self.recognizer = model_manager._facenet_recognizer
             
             print(f"✅ 用户 {user_id} 人脸数据已删除并重新加载模型")
-            print(f"📊 当前注册用户数: {self.recognizer.get_user_count()}")
+            print(f"📊 当前注册用户数: {model_manager.facenet_recognizer.get_user_count()}")
             return True
         
         except Exception as e:
