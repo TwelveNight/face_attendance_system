@@ -2,16 +2,17 @@
 采集人脸数据脚本
 使用YOLO检测人脸并保存,用于FaceNet训练
 """
+import cv2
+import logging
 import sys
 from pathlib import Path
 
-# 添加项目路径
-sys.path.append(str(Path(__file__).parent.parent.parent))
+# 添加backend目录到路径
+backend_dir = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(backend_dir))
 
-import cv2
 from config import config
 from train.common import YOLOFaceDetector, ensure_dir, save_face_image
-import logging
 
 # 配置日志
 logging.basicConfig(
