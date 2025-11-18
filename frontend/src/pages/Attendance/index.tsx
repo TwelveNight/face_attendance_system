@@ -2,8 +2,8 @@
  * 考勤打卡页面
  */
 import { useState, useRef, useEffect } from 'react';
-import { Card, Button, Space, Alert, message, Spin, Result } from 'antd';
-import { CameraOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { Card, Button, Space, Alert, message, Spin, Result, Upload } from 'antd';
+import { CameraOutlined, CheckCircleOutlined, UploadOutlined } from '@ant-design/icons';
 import { useAttendanceStore } from '../../store/attendanceStore';
 
 const Attendance = () => {
@@ -85,6 +85,42 @@ const Attendance = () => {
     }
   };
 
+  // 文件上传打卡
+  const handleFileUpload = async (file: File) => {
+    setLoading(true);
+    setCheckInResult(null);
+
+    try {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const imageData = e.target?.result as string;
+        
+        // 调用打卡API
+        const result = await checkIn(imageData);
+
+        if (result?.success) {
+          message.success(`打卡成功！欢迎 ${result.username}`);
+          setCheckInResult(result);
+        } else {
+          message.error(result?.message || '打卡失败');
+          setCheckInResult(result);
+        }
+        setLoading(false);
+      };
+      reader.onerror = () => {
+        message.error('图片读取失败');
+        setLoading(false);
+      };
+      reader.readAsDataURL(file);
+    } catch (error) {
+      message.error('打卡失败，请重试');
+      console.error('打卡错误:', error);
+      setLoading(false);
+    }
+
+    return false; // 阻止默认上传行为
+  };
+
   // 重新打卡
   const handleRetry = () => {
     setCheckInResult(null);
@@ -103,8 +139,8 @@ const Attendance = () => {
       <h1>考勤打卡</h1>
 
       <Alert
-        message="打卡说明"
-        description='请确保面部清晰可见，光线充足。点击"开启摄像头"后，对准摄像头，然后点击"立即打卡"按钮。'
+        message="打卡说明（测试模式）"
+        description='请确保面部清晰可见，光线充足。可以点击"开启摄像头"使用摄像头打卡，或者点击"上传图片"使用本地图片测试打卡。'
         type="info"
         showIcon
         style={{ marginBottom: 24 }}
@@ -155,14 +191,30 @@ const Attendance = () => {
             <div style={{ textAlign: 'center' }}>
               <Space size="large">
                 {!capturing ? (
-                  <Button
-                    type="primary"
-                    size="large"
-                    icon={<CameraOutlined />}
-                    onClick={startCamera}
-                  >
-                    开启摄像头
-                  </Button>
+                  <>
+                    <Button
+                      type="primary"
+                      size="large"
+                      icon={<CameraOutlined />}
+                      onClick={startCamera}
+                    >
+                      开启摄像头
+                    </Button>
+                    <Upload
+                      accept="image/*"
+                      showUploadList={false}
+                      beforeUpload={handleFileUpload}
+                    >
+                      <Button
+                        size="large"
+                        icon={<UploadOutlined />}
+                        loading={loading}
+                        disabled={loading}
+                      >
+                        上传图片打卡
+                      </Button>
+                    </Upload>
+                  </>
                 ) : (
                   <>
                     <Button
