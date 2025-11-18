@@ -1,0 +1,78 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# 虚拟环境
+venv/
+ENV/
+env/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 日志
+*.log
+logs/
+
+# 数据集目录 (太大,不提交到Git)
+# YOLO训练数据
+backend/train/train_yolo/data/train/
+backend/train/train_yolo/data/val/
+backend/train/train_yolo/runs/
+
+# FaceNet人脸数据
+backend/train/train_facenet/dataset/
+
+# PyTorch情感识别数据
+backend/train/train_emotion_pytorch/data/
+
+# Sklearn情感识别数据  
+backend/train/train_emotion_sklearn/data/
+
+# 训练生成的特征文件
+backend/train/train_emotion_sklearn/*.npz
+
+# 模型文件 (太大,不提交到Git)
+backend/saved_models/*.pt
+backend/saved_models/*.pth
+backend/saved_models/*.pkl
+backend/saved_models/*.npz
+backend/saved_models/*.h5
+
+# 用户上传数据
+backend/data/user_faces/
+backend/data/attendance.csv
+
+# 临时文件
+*.tmp
+*.bak
+.DS_Store
+Thumbs.db
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+*.ipynb
+
+# 前端
+frontend/node_modules/
+frontend/dist/
+frontend/.next/
+frontend/out/
+frontend/build/
+
+# 环境变量
+.env
+.env.local
+.env.*.local
