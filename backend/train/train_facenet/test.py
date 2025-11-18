@@ -2,20 +2,21 @@
 FaceNet人脸识别测试脚本
 实时测试训练好的FaceNet+SVM模型
 """
-import sys
-from pathlib import Path
-
-# 添加项目路径
-sys.path.append(str(Path(__file__).parent.parent.parent))
-
 import numpy as np
 import pickle
 import torch
-from facenet_pytorch import InceptionResnetV1
 import cv2
+import logging
+import sys
+from pathlib import Path
+
+# 添加backend目录到路径
+backend_dir = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(backend_dir))
+
+from facenet_pytorch import InceptionResnetV1
 from config import config
 from train.common import YOLOFaceDetector
-import logging
 
 # 配置日志
 logging.basicConfig(

@@ -2,21 +2,23 @@
 FaceNet人脸识别训练脚本
 使用facenet-pytorch提取人脸特征,训练SVM分类器
 """
+import cv2  # 先导入cv2避免DLL问题
+import numpy as np
+import pickle
 import sys
 from pathlib import Path
 
-# 添加项目路径
-sys.path.append(str(Path(__file__).parent.parent.parent))
+# 添加backend目录到路径
+backend_dir = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(backend_dir))
 
-import numpy as np
-import pickle
 from sklearn.svm import SVC
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 import torch
 from facenet_pytorch import InceptionResnetV1
-import cv2
+import mediapipe as mp
 from config import config
 from train.common import YOLOFaceDetector, load_dataset_by_class
 import logging
@@ -65,6 +67,16 @@ class FaceNetTrainer:
             confidence_threshold=config.YOLO_CONFIDENCE_THRESHOLD
         )
         
+        # 初始化MediaPipe人脸关键点检测(用于对齐)
+        logger.info("加载MediaPipe人脸对齐模型...")
+        self.mp_face_mesh = mp.solutions.face_mesh.FaceMesh(
+            static_image_mode=True,
+            max_num_faces=1,
+            refine_landmarks=True,
+            min_detection_confidence=0.5
+        )
+        logger.info("✓ MediaPipe模型已加载")
+        
         # 初始化FaceNet模型(使用预训练权重)
         logger.info("加载FaceNet模型...")
         self.facenet = InceptionResnetV1(pretrained='vggface2').eval().to(self.device)
@@ -75,37 +87,130 @@ class FaceNetTrainer:
         self.label_encoder = LabelEncoder()
         self.svm_model = None
     
-    def extract_face_embedding(self, face_image: np.ndarray) -> np.ndarray:
+    def align_face(self, face_image: np.ndarray) -> np.ndarray:
         """
-        提取人脸嵌入向量
+        使用MediaPipe进行人脸对齐
         
         Args:
             face_image: BGR格式人脸图像
         
         Returns:
+            对齐后的人脸图像
+        """
+        try:
+            # 转RGB
+            face_rgb = cv2.cvtColor(face_image, cv2.COLOR_BGR2RGB)
+            
+            # 检测关键点
+            results = self.mp_face_mesh.process(face_rgb)
+            
+            if not results.multi_face_landmarks:
+                return face_image  # 未检测到关键点,返回原图
+            
+            # 获取关键点
+            landmarks = results.multi_face_landmarks[0]
+            h, w = face_image.shape[:2]
+            
+            # 提取眼睛关键点(用于对齐)
+            # 左眼: 33, 右眼: 263
+            left_eye = landmarks.landmark[33]
+            right_eye = landmarks.landmark[263]
+            
+            # 计算眼睛中心点
+            left_eye_pt = np.array([left_eye.x * w, left_eye.y * h])
+            right_eye_pt = np.array([right_eye.x * w, right_eye.y * h])
+            
+            # 计算旋转角度
+            dY = right_eye_pt[1] - left_eye_pt[1]
+            dX = right_eye_pt[0] - left_eye_pt[0]
+            angle = np.degrees(np.arctan2(dY, dX))
+            
+            # 计算眼睛中心
+            eyes_center = ((left_eye_pt[0] + right_eye_pt[0]) / 2,
+                          (left_eye_pt[1] + right_eye_pt[1]) / 2)
+            
+            # 获取旋转矩阵
+            M = cv2.getRotationMatrix2D(eyes_center, angle, 1.0)
+            
+            # 旋转图像
+            aligned = cv2.warpAffine(face_image, M, (w, h),
+                                    flags=cv2.INTER_CUBIC,
+                                    borderMode=cv2.BORDER_REPLICATE)
+            
+            return aligned
+            
+        except Exception as e:
+            logger.debug(f"人脸对齐失败: {e}, 使用原图")
+            return face_image
+    
+    def extract_face_embedding(self, face_image: np.ndarray, use_alignment: bool = True) -> np.ndarray:
+        """
+        提取人脸嵌入向量
+        
+        Args:
+            face_image: BGR格式人脸图像
+            use_alignment: 是否使用MediaPipe对齐
+        
+        Returns:
             512维嵌入向量
         """
-        # 预处理
-        # BGR to RGB
+        # 1. 人脸对齐
+        if use_alignment:
+            face_image = self.align_face(face_image)
+        
+        # 2. BGR to RGB
         face_rgb = cv2.cvtColor(face_image, cv2.COLOR_BGR2RGB)
         
-        # 调整大小到160x160
+        # 3. 调整大小到160x160
         face_resized = cv2.resize(face_rgb, config.FACE_SIZE)
         
-        # 转换为tensor并归一化
+        # 4. 转换为tensor并归一化
         face_tensor = torch.from_numpy(face_resized).float()
         face_tensor = face_tensor.permute(2, 0, 1)  # HWC -> CHW
         face_tensor = (face_tensor - 127.5) / 128.0  # 归一化到[-1, 1]
         face_tensor = face_tensor.unsqueeze(0).to(self.device)  # 添加batch维度
         
-        # 提取特征
+        # 5. 提取特征
         with torch.no_grad():
             embedding = self.facenet(face_tensor)
         
-        # 转换为numpy
+        # 6. 转换为numpy
         embedding = embedding.cpu().numpy().flatten()
         
         return embedding
+    
+    def augment_face(self, face_image: np.ndarray) -> list:
+        """
+        数据增强:生成轻微变换的人脸图像
+        
+        Args:
+            face_image: 原始人脸图像
+        
+        Returns:
+            增强后的人脸图像列表
+        """
+        augmented = [face_image]  # 包含原图
+        
+        h, w = face_image.shape[:2]
+        
+        # 轻微旋转 (-5, +5度)
+        for angle in [-5, 5]:
+            M = cv2.getRotationMatrix2D((w/2, h/2), angle, 1.0)
+            rotated = cv2.warpAffine(face_image, M, (w, h))
+            augmented.append(rotated)
+        
+        # 亮度调整
+        hsv = cv2.cvtColor(face_image, cv2.COLOR_BGR2HSV).astype(np.float32)
+        hsv[:, :, 2] = hsv[:, :, 2] * 1.1  # 增亮10%
+        hsv[:, :, 2] = np.clip(hsv[:, :, 2], 0, 255)
+        brightened = cv2.cvtColor(hsv.astype(np.uint8), cv2.COLOR_HSV2BGR)
+        augmented.append(brightened)
+        
+        hsv[:, :, 2] = hsv[:, :, 2] * 0.9  # 降暗10%
+        darkened = cv2.cvtColor(hsv.astype(np.uint8), cv2.COLOR_HSV2BGR)
+        augmented.append(darkened)
+        
+        return augmented
     
     def load_and_process_dataset(self):
         """加载并处理数据集"""
@@ -131,14 +236,15 @@ class FaceNetTrainer:
             user_name = user_dir.name
             logger.info(f"\n处理用户: {user_name}")
             
-            # 加载该用户的所有图像
-            images, _ = load_dataset_by_class(user_dir.parent / user_name)
+            # 直接加载该用户目录下的所有图像
+            from train.common.data_utils import load_face_images
+            images = load_face_images(user_dir)
             
             if len(images) == 0:
                 logger.warning(f"  ⚠ 用户 {user_name} 没有图像,跳过")
                 continue
             
-            # 提取每张图像的嵌入向量
+            # 提取每张图像的嵌入向量(带数据增强)
             embeddings = []
             for i, img in enumerate(images):
                 try:
@@ -149,9 +255,13 @@ class FaceNetTrainer:
                         logger.warning(f"  ⚠ 图像 {i+1} 未检测到人脸,跳过")
                         continue
                     
-                    # 提取嵌入
-                    embedding = self.extract_face_embedding(face)
-                    embeddings.append(embedding)
+                    # 数据增强(每张原图生成多个变体)
+                    augmented_faces = self.augment_face(face)
+                    
+                    # 对每个增强样本提取特征(使用MTCNN对齐)
+                    for aug_face in augmented_faces:
+                        embedding = self.extract_face_embedding(aug_face, use_alignment=True)
+                        embeddings.append(embedding)
                     
                 except Exception as e:
                     logger.warning(f"  ⚠ 处理图像 {i+1} 失败: {e}")
