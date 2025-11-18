@@ -9,15 +9,29 @@ db = SQLAlchemy()
 
 
 class User(db.Model):
-    """用户表"""
+    """
+    用户表
+    
+    字段说明:
+    - id: 用户唯一标识
+    - username: 用户名
+    - student_id: 学号
+    - created_at: 创建时间
+    - avatar_path: 头像路径 (预留字段，当前未使用)
+    - face_embedding_path: 人脸特征文件路径 (预留字段，当前人脸特征存储在facenet_embeddings.npz中)
+    - is_active: 是否激活
+    
+    注意: 人脸特征实际存储在 backend/saved_models/facenet_embeddings.npz 中，
+          该文件包含所有用户的特征向量，通过user_id关联
+    """
     __tablename__ = 'user'
     
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     username = db.Column(db.String(50), nullable=False, unique=True, index=True)
     student_id = db.Column(db.String(20), unique=True, index=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    avatar_path = db.Column(db.String(255))
-    face_embedding_path = db.Column(db.String(255))  # 存储人脸特征文件路径
+    avatar_path = db.Column(db.String(255))  # 预留：用户头像路径
+    face_embedding_path = db.Column(db.String(255))  # 预留：单独的人脸特征文件路径
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     
     # 关系

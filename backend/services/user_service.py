@@ -51,12 +51,18 @@ class UserService:
             
             # 创建用户
             user = self.user_repo.create(username=username, student_id=student_id)
+            print(f"✓ 用户记录已创建: {username} (ID: {user.id})")
             
             # 如果提供了人脸图像,注册人脸
             if face_images and len(face_images) > 0:
+                print(f"📸 开始注册人脸: 收到 {len(face_images)} 张图片")
                 success = self.face_service.register_user_faces(user.id, face_images)
                 if not success:
                     print("⚠️  用户创建成功,但人脸注册失败")
+                else:
+                    print(f"✓ 人脸注册成功: 用户 {user.id}")
+            else:
+                print("⚠️  未提供人脸图像，跳过人脸注册")
             
             # 记录日志
             self.log_repo.create(

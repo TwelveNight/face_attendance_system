@@ -112,31 +112,47 @@ class FaceService:
             是否成功
         """
         try:
+            print(f"🔍 开始处理用户 {user_id} 的人脸图像...")
+            print(f"   收到图像数量: {len(images)}")
+            
             # 从每张图像中提取人脸
             face_images = []
             
-            for image in images:
+            for idx, image in enumerate(images):
+                print(f"   处理第 {idx+1}/{len(images)} 张图像...")
+                
                 # 检测最大人脸
                 face = self.detector.detect_largest_face(image)
                 
                 if face is not None:
+                    print(f"   ✓ 检测到人脸")
                     # 裁剪人脸
                     face_img = self.detector.crop_face(image, face)
                     if face_img is not None and face_img.size > 0:
                         face_images.append(face_img)
+                        print(f"   ✓ 人脸裁剪成功")
+                    else:
+                        print(f"   ✗ 人脸裁剪失败")
+                else:
+                    print(f"   ✗ 未检测到人脸")
             
             if len(face_images) == 0:
-                print(f"未检测到人脸")
+                print(f"❌ 未检测到任何有效人脸")
                 return False
             
+            print(f"✓ 成功提取 {len(face_images)} 张人脸图像")
+            
             # 添加到识别器
+            print(f"🔄 添加用户到识别器并训练模型...")
             self.recognizer.add_user(user_id, face_images)
             
-            print(f"✓ 用户 {user_id} 注册成功 ({len(face_images)} 张人脸)")
+            print(f"✅ 用户 {user_id} 人脸注册成功 ({len(face_images)} 张人脸)")
             return True
         
         except Exception as e:
-            print(f"✗ 用户注册失败: {e}")
+            print(f"❌ 用户注册失败: {e}")
+            import traceback
+            traceback.print_exc()
             return False
     
     def update_user_faces(self, user_id: int, images: List[np.ndarray]) -> bool:

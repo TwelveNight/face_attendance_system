@@ -52,8 +52,27 @@ class Config:
     REGISTER_FACE_COUNT = int(os.getenv('REGISTER_FACE_COUNT', 10))
     
     # ==================== 数据库配置 ====================
-    DATABASE_PATH = DATA_DIR / 'attendance.db'
-    DATABASE_URI = os.getenv('DATABASE_URI', f'sqlite:///{DATABASE_PATH}')
+    DB_TYPE = os.getenv('DB_TYPE', 'sqlite').lower()
+    
+    # 根据数据库类型构建连接URI
+    if DB_TYPE == 'mysql':
+        MYSQL_HOST = os.getenv('MYSQL_HOST', 'localhost')
+        MYSQL_PORT = int(os.getenv('MYSQL_PORT', 3306))
+        MYSQL_USER = os.getenv('MYSQL_USER', 'root')
+        MYSQL_PASSWORD = os.getenv('MYSQL_PASSWORD', '')
+        MYSQL_DATABASE = os.getenv('MYSQL_DATABASE', 'attendance_system')
+        MYSQL_CHARSET = os.getenv('MYSQL_CHARSET', 'utf8mb4')
+        DATABASE_URI = f'mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DATABASE}?charset={MYSQL_CHARSET}'
+    elif DB_TYPE == 'postgresql':
+        POSTGRES_HOST = os.getenv('POSTGRES_HOST', 'localhost')
+        POSTGRES_PORT = int(os.getenv('POSTGRES_PORT', 5432))
+        POSTGRES_USER = os.getenv('POSTGRES_USER', 'postgres')
+        POSTGRES_PASSWORD = os.getenv('POSTGRES_PASSWORD', '')
+        POSTGRES_DATABASE = os.getenv('POSTGRES_DATABASE', 'attendance_system')
+        DATABASE_URI = f'postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DATABASE}'
+    else:  # sqlite
+        DATABASE_PATH = DATA_DIR / os.getenv('SQLITE_PATH', 'attendance.db')
+        DATABASE_URI = f'sqlite:///{DATABASE_PATH}'
     
     # SQLAlchemy配置
     SQLALCHEMY_TRACK_MODIFICATIONS = False

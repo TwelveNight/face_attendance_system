@@ -58,6 +58,17 @@ def register_user():
         if not username:
             return error_response("用户名不能为空", 400)
         
+        # 检查用户名是否已存在
+        existing_user = user_service.get_user_by_username(username)
+        if existing_user:
+            return error_response(f"用户名已存在: {username}", 400)
+        
+        # 检查学号是否已存在
+        if student_id:
+            existing_student = user_service.get_user_by_student_id(student_id)
+            if existing_student:
+                return error_response(f"学号已存在: {student_id}", 400)
+        
         # 解码人脸图像
         face_images = []
         for img_base64 in face_images_base64:
@@ -70,11 +81,14 @@ def register_user():
             except Exception as e:
                 print(f"解码图像失败: {e}")
         
+        if face_images_base64 and not face_images:
+            return error_response("人脸图像解码失败，请重新拍摄", 400)
+        
         # 创建用户
         user = user_service.create_user(username, student_id, face_images)
         
         if not user:
-            return error_response("用户创建失败", 400)
+            return error_response("用户创建失败，请稍后重试", 400)
         
         return success_response(user.to_dict(), "用户注册成功", 201)
     

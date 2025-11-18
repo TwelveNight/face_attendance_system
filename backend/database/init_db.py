@@ -56,7 +56,8 @@ def init_database(drop_existing=False, create_sample_data=False):
             create_sample_users()
             print("✓ 示例数据创建成功")
         
-        print(f"\n数据库位置: {Config.DATABASE_PATH}")
+        print(f"\n数据库URI: {Config.DATABASE_URI}")
+        print(f"数据库类型: {Config.DB_TYPE}")
         print("初始化完成!")
 
 

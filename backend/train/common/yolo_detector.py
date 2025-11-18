@@ -95,10 +95,18 @@ class YOLOFaceDetector:
         # 应用边距
         if margin is not None:
             h, w = frame.shape[:2]
-            x1 = max(0, x1 - margin.get('left', 0))
-            y1 = max(0, y1 - margin.get('top', 0))
-            x2 = min(w, x2 + margin.get('right', 0))
-            y2 = min(h, y2 + margin.get('bottom', 0))
+            # 如果margin是整数，应用到所有边
+            if isinstance(margin, int):
+                x1 = max(0, x1 - margin)
+                y1 = max(0, y1 - margin)
+                x2 = min(w, x2 + margin)
+                y2 = min(h, y2 + margin)
+            # 如果margin是字典，分别应用
+            elif isinstance(margin, dict):
+                x1 = max(0, x1 - margin.get('left', 0))
+                y1 = max(0, y1 - margin.get('top', 0))
+                x2 = min(w, x2 + margin.get('right', 0))
+                y2 = min(h, y2 + margin.get('bottom', 0))
         
         # 裁剪人脸
         face = frame[y1:y2, x1:x2]

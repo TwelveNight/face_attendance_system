@@ -130,7 +130,7 @@ class FaceRecognitionTester:
                 break
             
             # 检测人脸
-            face = self.detector.detect_single_face(frame, margin=config.FACE_MARGIN)
+            face = self.detector.detect_single_face(frame, margin=20)
             
             # 显示画面
             display_frame = frame.copy()
