@@ -5,8 +5,9 @@ YOLO人脸检测模型测试脚本
 import sys
 from pathlib import Path
 
-# 添加项目路径
-sys.path.append(str(Path(__file__).parent.parent.parent))
+# 添加backend目录到路径
+backend_dir = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(backend_dir))
 
 import cv2
 from config import config

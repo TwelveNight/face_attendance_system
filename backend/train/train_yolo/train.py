@@ -104,9 +104,9 @@ def train_yolo_face_detection(
 
 
 if __name__ == '__main__':
-    # 训练参数
-    EPOCHS = 50
-    BATCH_SIZE = 16
+    # 训练参数 (快速验证模式)
+    EPOCHS = 3  # 快速验证,完整训练改为50-100
+    BATCH_SIZE = 8  # 减小batch避免显存不足
     IMG_SIZE = 640
     
     # 开始训练
