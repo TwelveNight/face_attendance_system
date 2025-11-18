@@ -4,7 +4,10 @@ Sklearn情感识别测试脚本
 """
 import sys
 from pathlib import Path
-sys.path.append(str(Path(__file__).parent.parent.parent))
+
+# 添加backend目录到路径
+backend_dir = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(backend_dir))
 
 import pickle
 import cv2
@@ -30,7 +33,7 @@ class SklearnEmotionTester:
         """初始化测试器"""
         # 加载模型
         if model_path is None:
-            model_path = str(config.EMOTION_SKLEARN_MODEL)
+            model_path = str(config.EMOTION_SVM_SKLEARN)
         
         logger.info(f"加载模型: {model_path}")
         

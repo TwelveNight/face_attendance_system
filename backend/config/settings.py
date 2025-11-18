@@ -49,6 +49,9 @@ class Config:
     FACE_SIZE = (160, 160)  # FaceNet输入尺寸
     FACE_MARGIN = {'top': 100, 'bottom': 50, 'left': 50, 'right': 50}  # 人脸裁剪边距
     
+    # 情绪识别参数
+    EMOTION_IMAGE_SIZE = (48, 48)  # 情绪识别CNN输入尺寸
+    
     # 情绪类别
     EMOTION_CLASSES = ['happy', 'sad', 'surprised']
     EMOTION_CLASS_COUNT = len(EMOTION_CLASSES)

@@ -4,7 +4,10 @@
 """
 import sys
 from pathlib import Path
-sys.path.append(str(Path(__file__).parent.parent.parent))
+
+# 添加backend目录到路径
+backend_dir = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(backend_dir))
 
 import numpy as np
 import cv2

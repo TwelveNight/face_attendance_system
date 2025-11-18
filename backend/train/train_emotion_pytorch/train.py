@@ -1,10 +1,6 @@
 """
 PyTorch情感识别训练脚本
 """
-import sys
-from pathlib import Path
-sys.path.append(str(Path(__file__).parent.parent.parent))
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -13,6 +9,12 @@ from sklearn.model_selection import train_test_split
 import numpy as np
 from tqdm import tqdm
 import logging
+import sys
+from pathlib import Path
+
+# 添加backend目录到路径
+backend_dir = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(backend_dir))
 
 from config import config
 from train.train_emotion_pytorch.model import create_model

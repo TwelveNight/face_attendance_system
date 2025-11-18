@@ -4,7 +4,10 @@ Sklearn SVM情感识别训练脚本
 """
 import sys
 from pathlib import Path
-sys.path.append(str(Path(__file__).parent.parent.parent))
+
+# 添加backend目录到路径
+backend_dir = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(backend_dir))
 
 import numpy as np
 import pickle
@@ -148,7 +151,7 @@ class SklearnEmotionTrainer:
     
     def save_model(self):
         """保存模型"""
-        save_path = config.EMOTION_SKLEARN_MODEL
+        save_path = config.EMOTION_SVM_SKLEARN
         
         model_data = {
             'svm': self.svm,
@@ -170,7 +173,7 @@ def main():
     parser.add_argument(
         '--data_dir',
         type=str,
-        default='data/train',
+        default='data',
         help='数据目录'
     )
     parser.add_argument(
