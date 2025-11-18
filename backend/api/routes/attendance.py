@@ -14,6 +14,76 @@ attendance_bp = Blueprint('attendance', __name__)
 attendance_service = AttendanceService()
 
 
+@attendance_bp.route('/preview', methods=['POST'])
+@require_json
+def preview_recognition():
+    """实时人脸识别预览（不保存打卡记录）"""
+    try:
+        data = request.get_json()
+        image_base64 = data.get('image')
+        
+        if not image_base64:
+            return error_response("图像不能为空", 400)
+        
+        # 解码图像
+        try:
+            img_data = base64.b64decode(image_base64.split(',')[1] if ',' in image_base64 else image_base64)
+            img_array = np.frombuffer(img_data, dtype=np.uint8)
+            image = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+        except Exception as e:
+            return error_response("图像解码失败", 400, str(e))
+        
+        if image is None:
+            return error_response("无效的图像", 400)
+        
+        # 检测并识别人脸（不保存记录）
+        from services.face_service import FaceService
+        face_service = FaceService()
+        result = face_service.detect_largest_face_and_recognize(image)
+        
+        if result is None:
+            return success_response({
+                'detected': False,
+                'message': '未检测到人脸'
+            })
+        
+        user_id = result['user_id']
+        confidence = result['confidence']
+        
+        if user_id is None:
+            return success_response({
+                'detected': True,
+                'recognized': False,
+                'confidence': confidence,
+                'message': f'检测到人脸，但未识别到已注册用户（置信度: {confidence:.2f}）'
+            })
+        
+        # 获取用户信息
+        from database.repositories import UserRepository
+        user = UserRepository.get_by_id(user_id)
+        
+        if not user:
+            return success_response({
+                'detected': True,
+                'recognized': False,
+                'message': '用户不存在'
+            })
+        
+        # 返回识别结果
+        return success_response({
+            'detected': True,
+            'recognized': True,
+            'user_id': user_id,
+            'username': user.username,
+            'student_id': user.student_id,
+            'confidence': confidence,
+            'message': f'识别到: {user.username}'
+        })
+    
+    except Exception as e:
+        return error_response("识别失败", 500, str(e))
+
+
 @attendance_bp.route('/check-in', methods=['POST'])
 @require_json
 def check_in():
@@ -41,7 +111,17 @@ def check_in():
         result = attendance_service.check_in(image, status)
         
         if not result['success']:
-            return error_response(result['message'], 400)
+            # 区分不同的失败原因
+            message = result['message']
+            
+            # 如果是未识别到用户，返回更详细的信息
+            if message == '未识别到用户':
+                confidence = result.get('confidence', 0)
+                detailed_message = f'未识别到已注册用户（置信度: {confidence:.2f}），请确认您已注册'
+                return error_response(detailed_message, 400)
+            
+            # 其他情况（未检测到人脸等）
+            return error_response(message, 400)
         
         # 构造响应数据
         response_data = {

@@ -98,6 +98,13 @@ export const userApi = {
 // ==================== 考勤管理API ====================
 
 export const attendanceApi = {
+  // 实时识别预览（不保存记录）
+  preview: (image: string) => {
+    return apiClient.post<any, ApiResponse<any>>('/api/attendance/preview', {
+      image,
+    });
+  },
+
   // 打卡
   checkIn: (image: string, status: string = 'present') => {
     return apiClient.post<any, ApiResponse<CheckInResult>>('/api/attendance/check-in', {

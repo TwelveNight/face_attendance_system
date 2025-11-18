@@ -5,14 +5,17 @@ import { useState, useRef, useEffect } from 'react';
 import { Card, Button, Space, Alert, message, Spin, Result, Upload } from 'antd';
 import { CameraOutlined, CheckCircleOutlined, UploadOutlined } from '@ant-design/icons';
 import { useAttendanceStore } from '../../store/attendanceStore';
+import { attendanceApi } from '../../api/client';
 
 const Attendance = () => {
   const [loading, setLoading] = useState(false);
   const [capturing, setCapturing] = useState(false);
   const [checkInResult, setCheckInResult] = useState<any>(null);
+  const [previewResult, setPreviewResult] = useState<any>(null); // 实时识别结果
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const previewIntervalRef = useRef<number | null>(null); // 预览定时器
 
   const { checkIn } = useAttendanceStore();
 
@@ -27,6 +30,7 @@ const Attendance = () => {
         streamRef.current = stream;
       }
       setCapturing(true);
+      // 注意：不在这里调用 startPreview，而是通过 useEffect 监听 capturing 变化
     } catch (error) {
       message.error('无法访问摄像头，请检查权限设置');
       console.error('摄像头错误:', error);
@@ -39,7 +43,58 @@ const Attendance = () => {
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
+    // 停止预览
+    if (previewIntervalRef.current) {
+      clearInterval(previewIntervalRef.current);
+      previewIntervalRef.current = null;
+    }
     setCapturing(false);
+    setPreviewResult(null);
+  };
+
+  // 实时预览识别
+  const startPreview = () => {
+    console.log('🎥 启动实时预览...');
+    
+    // 每500ms识别一次
+    previewIntervalRef.current = window.setInterval(async () => {
+      if (!videoRef.current || !canvasRef.current || !capturing) {
+        console.log('⚠️ 预览条件不满足:', { 
+          hasVideo: !!videoRef.current, 
+          hasCanvas: !!canvasRef.current, 
+          capturing 
+        });
+        return;
+      }
+
+      try {
+        const canvas = canvasRef.current;
+        const video = videoRef.current;
+        
+        // 检查视频是否准备好
+        if (video.videoWidth === 0 || video.videoHeight === 0) {
+          console.log('⏳ 等待视频加载...');
+          return;
+        }
+        
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        
+        if (ctx) {
+          ctx.drawImage(video, 0, 0);
+          const imageData = canvas.toDataURL('image/jpeg', 0.6);
+
+          console.log('📤 发送预览请求...');
+          // 调用预览API
+          const response = await attendanceApi.preview(imageData);
+          console.log('📥 预览结果:', response.data);
+          setPreviewResult(response.data);
+        }
+      } catch (error) {
+        console.error('❌ 预览识别错误:', error);
+      }
+    }, 500);
   };
 
   // 拍照并打卡
@@ -127,6 +182,27 @@ const Attendance = () => {
     startCamera();
   };
 
+  // 监听 capturing 状态，启动/停止预览
+  useEffect(() => {
+    if (capturing) {
+      console.log('📹 摄像头已启动，1秒后开始预览...');
+      // 等待视频流稳定
+      const timer = setTimeout(() => {
+        startPreview();
+      }, 1000);
+      
+      return () => clearTimeout(timer);
+    } else {
+      // 停止预览
+      if (previewIntervalRef.current) {
+        console.log('⏹️ 停止预览');
+        clearInterval(previewIntervalRef.current);
+        previewIntervalRef.current = null;
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [capturing]);
+
   // 组件卸载时停止摄像头
   useEffect(() => {
     return () => {
@@ -168,6 +244,7 @@ const Attendance = () => {
                 style={{
                   width: '100%',
                   display: capturing ? 'block' : 'none',
+                  borderRadius: 8,
                 }}
               />
               <canvas ref={canvasRef} style={{ display: 'none' }} />
@@ -183,6 +260,44 @@ const Attendance = () => {
                   }}
                 >
                   <CameraOutlined style={{ fontSize: 64, opacity: 0.3 }} />
+                </div>
+              )}
+
+              {/* 实时识别结果显示 */}
+              {capturing && previewResult && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: 10,
+                    left: 10,
+                    right: 10,
+                    padding: '12px 16px',
+                    background: previewResult.recognized 
+                      ? 'rgba(82, 196, 26, 0.9)' 
+                      : previewResult.detected 
+                      ? 'rgba(250, 173, 20, 0.9)' 
+                      : 'rgba(255, 77, 79, 0.9)',
+                    color: '#fff',
+                    borderRadius: 8,
+                    fontSize: 16,
+                    fontWeight: 'bold',
+                    textAlign: 'center',
+                    zIndex: 10,
+                  }}
+                >
+                  {previewResult.recognized ? (
+                    <>
+                      ✓ {previewResult.username} ({previewResult.student_id})
+                      <br />
+                      <span style={{ fontSize: 14 }}>
+                        置信度: {(previewResult.confidence * 100).toFixed(1)}%
+                      </span>
+                    </>
+                  ) : previewResult.detected ? (
+                    <>⚠️ {previewResult.message}</>
+                  ) : (
+                    <>❌ {previewResult.message}</>
+                  )}
                 </div>
               )}
             </div>
