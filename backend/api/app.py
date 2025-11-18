@@ -14,7 +14,7 @@ import logging
 from config.settings import Config
 from database.models import db
 from models.model_manager import model_manager
-from .middleware import handle_errors, log_requests
+from api.middleware import handle_errors, log_requests
 
 
 def create_app():
@@ -67,7 +67,7 @@ def setup_logging(app):
 
 def register_blueprints(app):
     """注册蓝图"""
-    from .routes import user_bp, attendance_bp, statistics_bp, video_bp, system_bp
+    from api.routes import user_bp, attendance_bp, statistics_bp, video_bp, system_bp
     
     app.register_blueprint(user_bp, url_prefix='/api/users')
     app.register_blueprint(attendance_bp, url_prefix='/api/attendance')

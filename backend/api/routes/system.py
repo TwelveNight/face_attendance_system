@@ -1,7 +1,7 @@
 """
 系统管理API路由
 """
-from flask import Blueprint
+from flask import Blueprint, request
 import torch
 
 from models.model_manager import model_manager
