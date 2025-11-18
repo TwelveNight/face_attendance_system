@@ -69,10 +69,25 @@ class FaceRecognitionTester:
         with open(svm_path, 'rb') as f:
             model_data = pickle.load(f)
         
-        self.svm = model_data['svm']
-        self.label_encoder = model_data['label_encoder']
-        logger.info(f"✓ SVM已加载,支持 {len(self.label_encoder.classes_)} 个用户")
-        logger.info(f"  用户列表: {list(self.label_encoder.classes_)}")
+        # 🔧 修复：兼容新旧格式
+        # 新格式：直接保存SVC对象
+        # 旧格式：保存字典 {'svm': SVC, 'label_encoder': LabelEncoder}
+        if isinstance(model_data, dict):
+            # 旧格式
+            self.svm = model_data['svm']
+            self.label_encoder = model_data['label_encoder']
+            logger.info(f"✓ SVM已加载 (旧格式),支持 {len(self.label_encoder.classes_)} 个用户")
+        else:
+            # 新格式：直接是SVC对象
+            self.svm = model_data
+            self.label_encoder = None  # 新格式不需要label_encoder
+            logger.info(f"✓ SVM已加载 (新格式),支持 {len(self.svm.classes_)} 个用户")
+        
+        # 显示用户列表
+        if self.label_encoder:
+            logger.info(f"  用户列表: {list(self.label_encoder.classes_)}")
+        else:
+            logger.info(f"  用户列表: {list(self.svm.classes_)}")
     
     def extract_embedding(self, face_image: np.ndarray) -> np.ndarray:
         """提取人脸嵌入向量"""
@@ -97,7 +112,7 @@ class FaceRecognitionTester:
         识别人脸
         
         Returns:
-            (用户名, 置信度)
+            (用户名/ID, 置信度)
         """
         # 提取嵌入
         embedding = self.extract_embedding(face_image)
@@ -106,9 +121,17 @@ class FaceRecognitionTester:
         prediction = self.svm.predict([embedding])[0]
         probabilities = self.svm.predict_proba([embedding])[0]
         
-        # 解码标签
-        user_name = self.label_encoder.inverse_transform([prediction])[0]
-        confidence = probabilities[prediction]
+        # 🔧 修复：兼容新旧格式
+        if self.label_encoder:
+            # 旧格式：使用label_encoder解码
+            user_name = self.label_encoder.inverse_transform([prediction])[0]
+            confidence = probabilities[prediction]
+        else:
+            # 新格式：prediction直接是用户ID（字符串）
+            user_name = prediction
+            # 获取对应类别的概率
+            class_idx = list(self.svm.classes_).index(prediction)
+            confidence = probabilities[class_idx]
         
         return user_name, confidence
     

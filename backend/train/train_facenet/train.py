@@ -233,15 +233,26 @@ class FaceNetTrainer:
         
         # 处理每个用户
         for user_dir in user_dirs:
-            user_name = user_dir.name
-            logger.info(f"\n处理用户: {user_name}")
+            user_folder_name = user_dir.name
+            
+            # 🔧 关键修改：尝试将文件夹名转换为数字ID
+            # 如果文件夹名是数字，使用数字ID（转为字符串）
+            # 如果不是数字，使用文件夹名（字符串）
+            try:
+                user_id = int(user_folder_name)
+                user_label = str(user_id)  # 统一转为字符串类型
+                logger.info(f"\n处理用户: {user_folder_name} -> ID: {user_label} (数字ID)")
+            except ValueError:
+                user_label = user_folder_name
+                logger.warning(f"\n处理用户: {user_folder_name} (字符串用户名 - 不推荐)")
+                logger.warning(f"  ⚠️  建议使用数字作为文件夹名，例如: 1, 2, 3...")
             
             # 直接加载该用户目录下的所有图像
             from train.common.data_utils import load_face_images
             images = load_face_images(user_dir)
             
             if len(images) == 0:
-                logger.warning(f"  ⚠ 用户 {user_name} 没有图像,跳过")
+                logger.warning(f"  ⚠ 用户 {user_label} 没有图像,跳过")
                 continue
             
             # 提取每张图像的嵌入向量(带数据增强)
@@ -268,19 +279,23 @@ class FaceNetTrainer:
             
             if len(embeddings) > 0:
                 self.X.extend(embeddings)
-                self.y.extend([user_name] * len(embeddings))
-                logger.info(f"  ✓ 成功处理 {len(embeddings)}/{len(images)} 张图像")
+                # 🔧 使用统一的字符串类型label
+                self.y.extend([user_label] * len(embeddings))
+                logger.info(f"  ✓ 成功处理 {len(embeddings)}/{len(images)} 张图像 (Label: '{user_label}')")
             else:
-                logger.warning(f"  ⚠ 用户 {user_name} 没有有效图像")
+                logger.warning(f"  ⚠ 用户 {user_label} 没有有效图像")
         
         # 转换为numpy数组
         self.X = np.array(self.X)
-        self.y = np.array(self.y)
+        # 🔧 确保labels是object类型（字符串）
+        self.y = np.array(self.y, dtype=object)
         
         logger.info("\n" + "=" * 60)
         logger.info(f"数据集加载完成:")
         logger.info(f"  - 总样本数: {len(self.X)}")
         logger.info(f"  - 用户数: {len(set(self.y))}")
+        logger.info(f"  - 用户ID列表: {np.unique(self.y)}")
+        logger.info(f"  - Labels类型: {self.y.dtype}")
         logger.info(f"  - 特征维度: {self.X.shape[1]}")
         logger.info("=" * 60)
         
@@ -340,24 +355,26 @@ class FaceNetTrainer:
         
         # 保存嵌入向量和标签
         embeddings_path = config.FACENET_EMBEDDINGS
+        # 🔧 使用allow_pickle=True以支持object类型的labels
         np.savez_compressed(
             embeddings_path,
             embeddings=self.X,
             labels=self.y
         )
         logger.info(f"✓ 嵌入数据已保存: {embeddings_path}")
+        logger.info(f"  - Labels类型: {self.y.dtype}")
+        logger.info(f"  - 用户ID列表: {np.unique(self.y)}")
         
-        # 保存SVM模型和标签编码器
+        # 🔧 关键修改：直接保存SVM模型对象，不使用字典
+        # 这样与系统注册保存的格式一致
         svm_path = config.FACENET_SVM
-        model_data = {
-            'svm': self.svm_model,
-            'label_encoder': self.label_encoder
-        }
         
         with open(svm_path, 'wb') as f:
-            pickle.dump(model_data, f)
+            pickle.dump(self.svm_model, f)
         
         logger.info(f"✓ SVM模型已保存: {svm_path}")
+        logger.info(f"  - 模型类型: {type(self.svm_model).__name__}")
+        logger.info(f"  - 类别数: {len(self.svm_model.classes_)}")
         logger.info("\n所有模型文件已保存!")
 
 
