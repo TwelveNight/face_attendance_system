@@ -37,27 +37,16 @@ class Config:
     FACENET_EMBEDDINGS = MODEL_DIR / 'facenet_embeddings.npz'
     FACENET_SVM = MODEL_DIR / 'facenet_svm.pkl'
     
-    # 情绪识别模型
-    EMOTION_CNN_PYTORCH = MODEL_DIR / 'emotion_cnn.pth'  # PyTorch CNN模型
-    EMOTION_SVM_SKLEARN = MODEL_DIR / 'emotion_svm.pkl'  # Sklearn SVM模型
-    
     # ==================== 模型参数 ====================
     # YOLO检测阈值
     YOLO_CONFIDENCE_THRESHOLD = float(os.getenv('YOLO_THRESHOLD', 0.5))
     
     # 人脸处理参数
     FACE_SIZE = (160, 160)  # FaceNet输入尺寸
-    FACE_MARGIN = {'top': 100, 'bottom': 50, 'left': 50, 'right': 50}  # 人脸裁剪边距
+    FACE_MARGIN = 20  # 人脸裁剪边距(像素)
     
-    # 情绪识别参数
-    EMOTION_IMAGE_SIZE = (48, 48)  # 情绪识别CNN输入尺寸
-    
-    # 情绪类别
-    EMOTION_CLASSES = ['happy', 'sad', 'surprised']
-    EMOTION_CLASS_COUNT = len(EMOTION_CLASSES)
-    
-    # 默认情绪识别模型 ('pytorch', 'sklearn', 'deepface')
-    DEFAULT_EMOTION_MODEL = os.getenv('DEFAULT_EMOTION_MODEL', 'pytorch')
+    # 人脸识别阈值
+    FACE_RECOGNITION_THRESHOLD = float(os.getenv('FACE_RECOGNITION_THRESHOLD', 0.6))
     
     # 用户注册时采集的人脸图像数量
     REGISTER_FACE_COUNT = int(os.getenv('REGISTER_FACE_COUNT', 10))
@@ -142,7 +131,6 @@ class Config:
         print(f"数据目录: {cls.DATA_DIR}")
         print(f"数据库: {cls.DATABASE_URI}")
         print(f"API地址: {cls.API_HOST}:{cls.API_PORT}")
-        print(f"默认情绪模型: {cls.DEFAULT_EMOTION_MODEL}")
         print(f"GPU加速: {cls.USE_CUDA}")
         print(f"设备: {cls.get_device()}")
         print("=" * 60)
