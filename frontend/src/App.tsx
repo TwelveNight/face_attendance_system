@@ -4,6 +4,7 @@ import zhCN from 'antd/locale/zh_CN';
 import MainLayout from './components/Layout/MainLayout';
 import Dashboard from './pages/Dashboard';
 import Attendance from './pages/Attendance';
+import Users from './pages/Users';
 import './App.css';
 
 function App() {
@@ -23,6 +24,7 @@ function App() {
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="attendance" element={<Attendance />} />
+            <Route path="users" element={<Users />} />
             {/* 其他路由将在后续添加 */}
           </Route>
         </Routes>
