@@ -207,30 +207,58 @@ class FaceService:
             是否成功
         """
         try:
-            print(f"🗑️  开始删除用户 {user_id} 的人脸数据...")
+            print(f"\n{'='*70}")
+            print(f"🗑️  [FaceService] 开始删除用户 {user_id} 的人脸数据...")
+            print(f"{'='*70}")
+            
+            # 显示删除前的状态
+            print(f"\n📊 删除前模型状态:")
+            print(f"  - 当前识别器: {self.recognizer}")
+            print(f"  - 注册用户数: {self.recognizer.get_user_count()}")
+            if self.recognizer.labels is not None:
+                unique_users = np.unique(self.recognizer.labels)
+                print(f"  - 用户ID列表: {unique_users}")
             
             # 删除用户数据
+            print(f"\n🔄 调用 recognizer.remove_user({user_id})...")
             self.recognizer.remove_user(user_id)
             
             # 重新加载模型以确保内存中的数据是最新的
+            print(f"\n{'='*70}")
             print(f"🔄 重新加载识别器以同步删除...")
+            print(f"{'='*70}")
             from models.model_manager import model_manager
             
             # 重新加载FaceNet识别器
             old_recognizer = model_manager._facenet_recognizer
+            print(f"  - 旧识别器: {old_recognizer}")
             if old_recognizer is not None:
                 del old_recognizer
+                print(f"  - 已删除旧识别器")
             
             # 创建新的识别器实例（会从文件重新加载）
+            print(f"  - 创建新识别器实例...")
             from models.facenet_recognizer import FaceNetRecognizer
             model_manager._facenet_recognizer = FaceNetRecognizer()
+            print(f"  - 新识别器已创建")
             
+            # 显示最终状态
+            print(f"\n📊 删除后模型状态:")
+            print(f"  - 新识别器: {model_manager.facenet_recognizer}")
+            print(f"  - 注册用户数: {model_manager.facenet_recognizer.get_user_count()}")
+            if model_manager.facenet_recognizer.labels is not None:
+                unique_users = np.unique(model_manager.facenet_recognizer.labels)
+                print(f"  - 用户ID列表: {unique_users}")
+            
+            print(f"\n{'='*70}")
             print(f"✅ 用户 {user_id} 人脸数据已删除并重新加载模型")
-            print(f"📊 当前注册用户数: {model_manager.facenet_recognizer.get_user_count()}")
+            print(f"{'='*70}\n")
             return True
         
         except Exception as e:
+            print(f"\n{'='*70}")
             print(f"❌ 删除用户人脸数据失败: {e}")
+            print(f"{'='*70}")
             import traceback
             traceback.print_exc()
             return False

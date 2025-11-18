@@ -145,11 +145,13 @@ class FaceNetRecognizer:
                 # 取最大相似度（范围 [-1, 1]）
                 max_similarity = float(np.max(similarities))
                 
-                # 余弦相似度阈值（更严格）
-                # 对于单用户，要求至少 0.5 的余弦相似度（表示向量夹角 < 60度）
-                cosine_threshold = 0.5
+                # 余弦相似度阈值（严格）
+                # 对于单用户，要求至少 0.75 的余弦相似度（表示向量夹角 < 41度）
+                # 这样可以有效防止未注册用户被误识别
+                cosine_threshold = 0.75
                 
                 if max_similarity < cosine_threshold:
+                    # 未达到阈值，返回None
                     # 转换为 [0, 1] 范围用于显示
                     confidence = (max_similarity + 1) / 2
                     return None, confidence
@@ -281,21 +283,65 @@ class FaceNetRecognizer:
         Args:
             user_id: 用户ID
         """
+        print(f"\n{'='*60}")
+        print(f"🗑️  [FaceNetRecognizer] 开始删除用户 {user_id}")
+        print(f"{'='*60}")
+        
         if self.embeddings is None or self.labels is None:
+            print("⚠️  没有训练数据，跳过删除")
             return
         
-        # 过滤掉该用户的数据
-        mask = self.labels != user_id
+        # 显示删除前的状态
+        unique_labels_before = np.unique(self.labels)
+        print(f"\n📊 删除前状态:")
+        print(f"  - 总样本数: {len(self.embeddings)}")
+        print(f"  - 用户数: {len(unique_labels_before)}")
+        print(f"  - 用户ID列表: {unique_labels_before}")
+        
+        # 统计要删除的用户的样本数
+        # 注意：labels可能是字符串或整数，需要统一比较
+        user_id_str = str(user_id)
+        user_samples_int = np.sum(self.labels == user_id)
+        user_samples_str = np.sum(self.labels == user_id_str)
+        user_samples = user_samples_int + user_samples_str
+        
+        print(f"\n🎯 目标用户 {user_id}:")
+        print(f"  - 样本数（整数匹配）: {user_samples_int}")
+        print(f"  - 样本数（字符串匹配）: {user_samples_str}")
+        print(f"  - 总样本数: {user_samples}")
+        
+        if user_samples == 0:
+            print(f"⚠️  用户 {user_id} 没有样本，无需删除")
+            return
+        
+        # 过滤掉该用户的数据（同时匹配整数和字符串）
+        print(f"\n🔄 开始过滤数据...")
+        mask = (self.labels != user_id) & (self.labels != user_id_str)
         self.embeddings = self.embeddings[mask]
         self.labels = self.labels[mask]
         
+        # 显示删除后的状态
+        unique_labels_after = np.unique(self.labels) if len(self.labels) > 0 else np.array([])
+        print(f"\n📊 删除后状态:")
+        print(f"  - 总样本数: {len(self.embeddings)}")
+        print(f"  - 用户数: {len(unique_labels_after)}")
+        print(f"  - 用户ID列表: {unique_labels_after}")
+        print(f"  - 已删除样本数: {user_samples}")
+        
         # 重新训练
         if len(self.embeddings) > 0:
+            print(f"\n🔄 重新训练模型...")
             self.train_svm()
+            print(f"💾 保存更新后的模型文件...")
             self.save_trained_data()
+            print(f"✅ 模型已更新并保存")
         else:
-            print("⚠️  所有用户已删除")
+            print("⚠️  所有用户已删除，清空模型")
             self.svm_model = None
+        
+        print(f"\n{'='*60}")
+        print(f"✅ 用户 {user_id} 删除完成")
+        print(f"{'='*60}\n")
     
     def get_user_count(self) -> int:
         """获取注册用户数量"""

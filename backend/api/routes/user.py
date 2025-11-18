@@ -157,9 +157,10 @@ def update_user_faces(user_id):
 
 @user_bp.route('/<int:user_id>', methods=['DELETE'])
 def delete_user(user_id):
-    """删除用户"""
+    """删除用户（默认硬删除）"""
     try:
-        hard_delete = request.args.get('hard', 'false').lower() == 'true'
+        # 默认硬删除（物理删除），除非明确指定 hard=false
+        hard_delete = request.args.get('hard', 'true').lower() == 'true'
         
         success = user_service.delete_user(user_id, hard_delete)
         

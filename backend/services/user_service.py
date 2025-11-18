@@ -153,13 +153,13 @@ class UserService:
             print(f"✗ 更新用户人脸失败: {e}")
             return False
     
-    def delete_user(self, user_id: int, hard_delete: bool = False) -> bool:
+    def delete_user(self, user_id: int, hard_delete: bool = True) -> bool:
         """
         删除用户
         
         Args:
             user_id: 用户ID
-            hard_delete: 是否硬删除(物理删除)
+            hard_delete: 是否硬删除(物理删除)，默认True
             
         Returns:
             是否成功
@@ -170,27 +170,51 @@ class UserService:
                 print(f"用户不存在: {user_id}")
                 return False
             
-            # 删除人脸数据
+            username = user.username
+            
+            # 如果是硬删除，先记录日志（在用户被删除之前）
+            if hard_delete:
+                print(f"📝 记录删除日志...")
+                try:
+                    self.log_repo.create(
+                        event_type='user_deleted',
+                        message=f"删除用户: {username} (硬删除: True)",
+                        user_id=user_id
+                    )
+                except Exception as log_error:
+                    print(f"⚠️  记录日志失败: {log_error}")
+            
+            # 删除人脸数据（从模型文件中移除）
+            print(f"🗑️  删除用户 {user_id} ({username}) 的人脸数据...")
             self.face_service.remove_user_faces(user_id)
             
-            # 删除用户
+            # 删除用户数据库记录
             if hard_delete:
+                print(f"🗑️  从数据库物理删除用户 {user_id}...")
                 success = self.user_repo.hard_delete(user_id)
             else:
+                print(f"🗑️  从数据库软删除用户 {user_id}...")
                 success = self.user_repo.delete(user_id)
+                # 软删除后记录日志（用户还在，只是is_active=False）
+                if success:
+                    try:
+                        self.log_repo.create(
+                            event_type='user_deleted',
+                            message=f"删除用户: {username} (硬删除: False)",
+                            user_id=user_id
+                        )
+                    except Exception as log_error:
+                        print(f"⚠️  记录日志失败: {log_error}")
             
             if success:
-                self.log_repo.create(
-                    event_type='user_deleted',
-                    message=f"删除用户: {user.username}",
-                    user_id=user_id
-                )
-                print(f"✓ 用户删除成功: {user.username}")
+                print(f"✅ 用户完全删除成功: {username}")
             
             return success
         
         except Exception as e:
-            print(f"✗ 删除用户失败: {e}")
+            print(f"❌ 删除用户失败: {e}")
+            import traceback
+            traceback.print_exc()
             return False
     
     def get_user_count(self, active_only: bool = True) -> int:

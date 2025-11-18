@@ -78,9 +78,13 @@ class UserRepository:
     
     @staticmethod
     def hard_delete(user_id: int) -> bool:
-        """硬删除用户"""
+        """硬删除用户（级联删除关联记录）"""
         user = User.query.get(user_id)
         if user:
+            # 先删除关联的系统日志（避免外键约束错误）
+            SystemLog.query.filter_by(user_id=user_id).delete()
+            
+            # 删除用户（attendance会通过cascade自动删除）
             db.session.delete(user)
             db.session.commit()
             return True

@@ -82,8 +82,8 @@ export const userApi = {
     });
   },
 
-  // 删除用户
-  deleteUser: (userId: number, hard: boolean = false) => {
+  // 删除用户（默认硬删除）
+  deleteUser: (userId: number, hard: boolean = true) => {
     return apiClient.delete<any, ApiResponse>(`/api/users/${userId}`, {
       params: { hard },
     });
