@@ -44,10 +44,15 @@ class AttendanceService:
             } or None
         """
         try:
+            print(f"\n{'='*70}")
+            print(f"🔍 [AttendanceService] 开始打卡识别")
+            print(f"{'='*70}")
+            
             # 检测并识别人脸
             result = self.face_service.detect_largest_face_and_recognize(image)
             
             if result is None:
+                print(f"❌ 未检测到人脸")
                 return {
                     'success': False,
                     'message': '未检测到人脸'
@@ -56,7 +61,13 @@ class AttendanceService:
             user_id = result['user_id']
             confidence = result['confidence']
             
+            print(f"\n📊 识别结果:")
+            print(f"  - 用户ID: {user_id}")
+            print(f"  - 置信度: {confidence:.6f} (完整精度)")
+            print(f"  - 置信度: {confidence:.2f} (显示精度)")
+            
             if user_id is None:
+                print(f"❌ 未识别到已注册用户 (置信度: {confidence:.6f})")
                 return {
                     'success': False,
                     'message': '未识别到用户',
@@ -99,7 +110,11 @@ class AttendanceService:
                 user_id=user_id
             )
             
-            print(f"✓ 打卡成功: {user.username} (置信度: {confidence:.2f})")
+            print(f"\n✅ 打卡成功:")
+            print(f"  - 用户: {user.username}")
+            print(f"  - 置信度: {confidence:.6f} (完整)")
+            print(f"  - 置信度: {confidence:.2f} (显示)")
+            print(f"{'='*70}\n")
             
             return {
                 'success': True,

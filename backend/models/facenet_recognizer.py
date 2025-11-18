@@ -63,8 +63,8 @@ class FaceNetRecognizer:
     def load_trained_data(self):
         """加载训练好的数据"""
         try:
-            # 加载特征
-            data = np.load(self.embeddings_path)
+            # 加载特征（允许pickle以支持object类型的labels）
+            data = np.load(self.embeddings_path, allow_pickle=True)
             self.embeddings = data['embeddings']
             self.labels = data['labels']
             
@@ -133,6 +133,15 @@ class FaceNetRecognizer:
             
             # 特殊情况：只有1个用户时，使用余弦相似度
             unique_labels = np.unique(self.labels)
+            
+            print(f"\n{'='*60}")
+            print(f"🔍 [FaceNetRecognizer] 开始识别")
+            print(f"{'='*60}")
+            print(f"📊 模型状态:")
+            print(f"  - 注册用户数: {len(unique_labels)}")
+            print(f"  - 用户ID列表: {unique_labels}")
+            print(f"  - 总样本数: {len(self.embeddings)}")
+            
             if len(unique_labels) == 1:
                 # 计算与所有已知特征的余弦相似度
                 similarities = []
@@ -144,49 +153,102 @@ class FaceNetRecognizer:
                 
                 # 取最大相似度（范围 [-1, 1]）
                 max_similarity = float(np.max(similarities))
+                min_similarity = float(np.min(similarities))
+                avg_similarity = float(np.mean(similarities))
+                
+                print(f"\n🎯 单用户模式 - 余弦相似度:")
+                print(f"  - 最大相似度: {max_similarity:.6f}")
+                print(f"  - 最小相似度: {min_similarity:.6f}")
+                print(f"  - 平均相似度: {avg_similarity:.6f}")
+                print(f"  - 样本数: {len(similarities)}")
                 
                 # 余弦相似度阈值（严格）
                 # 对于单用户，要求至少 0.75 的余弦相似度（表示向量夹角 < 41度）
                 # 这样可以有效防止未注册用户被误识别
                 cosine_threshold = 0.75
+                print(f"  - 阈值: {cosine_threshold}")
                 
                 if max_similarity < cosine_threshold:
                     # 未达到阈值，返回None
                     # 转换为 [0, 1] 范围用于显示
                     confidence = (max_similarity + 1) / 2
+                    print(f"\n❌ 未通过阈值检查:")
+                    print(f"  - 最大相似度 {max_similarity:.6f} < 阈值 {cosine_threshold}")
+                    print(f"  - 转换后置信度: {confidence:.6f}")
+                    print(f"{'='*60}\n")
                     return None, confidence
                 
                 # 通过阈值，返回用户ID和置信度
                 confidence = (max_similarity + 1) / 2
-                return int(unique_labels[0]), confidence
+                print(f"\n✅ 通过阈值检查:")
+                print(f"  - 最大相似度 {max_similarity:.6f} >= 阈值 {cosine_threshold}")
+                print(f"  - 转换后置信度: {confidence:.6f}")
+                
+                # 🔧 修复：尝试转换为整数，如果失败则返回字符串
+                try:
+                    user_id = int(unique_labels[0])
+                    print(f"  - 识别用户ID: {user_id}")
+                    print(f"{'='*60}\n")
+                except (ValueError, TypeError):
+                    # 如果是字符串类型的用户名，返回None（不是数字ID）
+                    print(f"⚠️  单用户模式下的label不是数字ID: {unique_labels[0]}")
+                    print(f"{'='*60}\n")
+                    return None, confidence
+                return user_id, confidence
             
             # 多用户情况：使用SVM
+            print(f"\n🎯 多用户模式 - SVM分类:")
+            
             if self.svm_model is None:
+                print(f"❌ SVM模型未训练")
+                print(f"{'='*60}\n")
                 return None, 0.0
             
             # SVM预测
             prediction = self.svm_model.predict([embedding])[0]
+            print(f"  - SVM预测: {prediction}")
             
             # 获取决策函数值(置信度)
             decision_values = self.svm_model.decision_function([embedding])
+            print(f"  - 决策函数值: {decision_values}")
             
             # 计算置信度
             if len(decision_values.shape) > 1:
                 # 多分类
-                confidence = float(np.max(decision_values))
+                raw_confidence = float(np.max(decision_values))
+                print(f"  - 多分类模式")
+                print(f"  - 原始置信度: {raw_confidence:.6f}")
             else:
                 # 二分类
-                confidence = float(abs(decision_values[0]))
+                raw_confidence = float(abs(decision_values[0]))
+                print(f"  - 二分类模式")
+                print(f"  - 原始置信度: {raw_confidence:.6f}")
             
             # 归一化置信度到[0, 1]
-            confidence = 1 / (1 + np.exp(-confidence))
+            confidence = 1 / (1 + np.exp(-raw_confidence))
+            print(f"  - 归一化置信度: {confidence:.6f}")
+            print(f"  - 阈值: {Config.FACE_RECOGNITION_THRESHOLD}")
             
             # 检查阈值
             if confidence < Config.FACE_RECOGNITION_THRESHOLD:
+                print(f"\n❌ 未通过阈值检查:")
+                print(f"  - 置信度 {confidence:.6f} < 阈值 {Config.FACE_RECOGNITION_THRESHOLD}")
+                print(f"{'='*60}\n")
                 return None, confidence
             
-            # 获取用户ID
-            user_id = int(prediction)
+            print(f"\n✅ 通过阈值检查:")
+            print(f"  - 置信度 {confidence:.6f} >= 阈值 {Config.FACE_RECOGNITION_THRESHOLD}")
+            
+            # 🔧 修复：获取用户ID，尝试转换为整数
+            try:
+                user_id = int(prediction)
+                print(f"  - 识别用户ID: {user_id}")
+                print(f"{'='*60}\n")
+            except (ValueError, TypeError):
+                # 如果是字符串类型的用户名，返回None（不是数字ID）
+                print(f"⚠️  SVM预测的label不是数字ID: {prediction}")
+                print(f"{'='*60}\n")
+                return None, confidence
             
             return user_id, confidence
         
@@ -220,28 +282,76 @@ class FaceNetRecognizer:
             user_id: 用户ID
             face_images: 用户的人脸图像列表
         """
+        print(f"\n{'='*60}")
+        print(f"➕ [FaceNetRecognizer] 添加用户 {user_id}")
+        print(f"{'='*60}")
+        
+        # 显示添加前的状态
+        if self.embeddings is not None:
+            unique_labels_before = np.unique(self.labels)
+            print(f"\n📊 添加前状态:")
+            print(f"  - 总样本数: {len(self.embeddings)}")
+            print(f"  - 用户数: {len(unique_labels_before)}")
+            print(f"  - 用户ID列表: {unique_labels_before}")
+            print(f"  - Labels类型: {self.labels.dtype}")
+            print(f"  - Labels示例: {self.labels[:3] if len(self.labels) > 0 else []}")
+        else:
+            print(f"\n📊 添加前状态: 空模型")
+        
         # 提取所有人脸的特征
+        print(f"\n🔄 提取 {len(face_images)} 张人脸的特征向量...")
         new_embeddings = []
-        for face_image in face_images:
+        for idx, face_image in enumerate(face_images):
             embedding = self.extract_embedding(face_image)
             new_embeddings.append(embedding)
+            if (idx + 1) % 5 == 0 or idx == len(face_images) - 1:
+                print(f"  - 已提取 {idx + 1}/{len(face_images)} 张")
         
         new_embeddings = np.array(new_embeddings)
-        new_labels = np.array([user_id] * len(new_embeddings))
+        # 🔧 关键修复：统一转为字符串类型，避免类型混乱
+        user_id_str = str(user_id)
+        new_labels = np.array([user_id_str] * len(new_embeddings), dtype=object)
+        
+        print(f"\n📦 新用户数据:")
+        print(f"  - 用户ID: {user_id} -> '{user_id_str}' (字符串)")
+        print(f"  - 样本数: {len(new_embeddings)}")
+        print(f"  - Embedding维度: {new_embeddings.shape}")
+        print(f"  - Labels类型: {new_labels.dtype}")
         
         # 合并到现有数据
         if self.embeddings is not None:
+            print(f"\n🔄 合并到现有数据...")
+            # 🔧 确保现有labels也是字符串类型
+            if self.labels.dtype != object:
+                print(f"  ⚠️  转换现有labels为字符串类型")
+                self.labels = self.labels.astype(str)
+            
             self.embeddings = np.vstack([self.embeddings, new_embeddings])
             self.labels = np.hstack([self.labels, new_labels])
         else:
+            print(f"\n📦 创建新模型数据...")
             self.embeddings = new_embeddings
             self.labels = new_labels
         
+        # 显示添加后的状态
+        unique_labels_after = np.unique(self.labels)
+        print(f"\n📊 添加后状态:")
+        print(f"  - 总样本数: {len(self.embeddings)}")
+        print(f"  - 用户数: {len(unique_labels_after)}")
+        print(f"  - 用户ID列表: {unique_labels_after}")
+        print(f"  - Labels类型: {self.labels.dtype}")
+        
         # 重新训练SVM
+        print(f"\n🔄 重新训练SVM...")
         self.train_svm()
         
         # 保存
+        print(f"💾 保存模型数据...")
         self.save_trained_data()
+        
+        print(f"\n{'='*60}")
+        print(f"✅ 用户 {user_id} 添加完成")
+        print(f"{'='*60}\n")
     
     def train_svm(self):
         """训练SVM分类器"""
