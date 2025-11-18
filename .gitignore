@@ -76,3 +76,5 @@ frontend/build/
 .env
 .env.local
 .env.*.local
+
+*.pt
