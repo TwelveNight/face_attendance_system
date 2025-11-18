@@ -45,6 +45,7 @@ def check_in():
         
         # 构造响应数据
         response_data = {
+            'success': True,
             'user_id': result['user_id'],
             'username': result['username'],
             'student_id': result.get('student_id'),

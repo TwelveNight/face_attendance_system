@@ -146,7 +146,20 @@ class FaceService:
             print(f"🔄 添加用户到识别器并训练模型...")
             self.recognizer.add_user(user_id, face_images)
             
+            # 重新加载模型以确保所有服务使用最新数据
+            print(f"🔄 重新加载识别器以同步更新...")
+            from models.model_manager import model_manager
+            from models.facenet_recognizer import FaceNetRecognizer
+            
+            old_recognizer = model_manager._facenet_recognizer
+            if old_recognizer is not None:
+                del old_recognizer
+            
+            model_manager._facenet_recognizer = FaceNetRecognizer()
+            self.recognizer = model_manager._facenet_recognizer
+            
             print(f"✅ 用户 {user_id} 人脸注册成功 ({len(face_images)} 张人脸)")
+            print(f"📊 当前注册用户数: {self.recognizer.get_user_count()}")
             return True
         
         except Exception as e:
@@ -188,12 +201,33 @@ class FaceService:
             是否成功
         """
         try:
+            print(f"🗑️  开始删除用户 {user_id} 的人脸数据...")
+            
+            # 删除用户数据
             self.recognizer.remove_user(user_id)
-            print(f"✓ 用户 {user_id} 人脸数据已删除")
+            
+            # 重新加载模型以确保内存中的数据是最新的
+            print(f"🔄 重新加载识别器以同步删除...")
+            from models.model_manager import model_manager
+            
+            # 重新加载FaceNet识别器
+            old_recognizer = model_manager._facenet_recognizer
+            if old_recognizer is not None:
+                del old_recognizer
+            
+            # 创建新的识别器实例（会从文件重新加载）
+            from models.facenet_recognizer import FaceNetRecognizer
+            model_manager._facenet_recognizer = FaceNetRecognizer()
+            self.recognizer = model_manager._facenet_recognizer
+            
+            print(f"✅ 用户 {user_id} 人脸数据已删除并重新加载模型")
+            print(f"📊 当前注册用户数: {self.recognizer.get_user_count()}")
             return True
         
         except Exception as e:
-            print(f"✗ 删除用户人脸数据失败: {e}")
+            print(f"❌ 删除用户人脸数据失败: {e}")
+            import traceback
+            traceback.print_exc()
             return False
     
     def collect_faces_from_video(self, video_source: int = 0, 

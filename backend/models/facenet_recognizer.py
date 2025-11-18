@@ -123,12 +123,39 @@ class FaceNetRecognizer:
         Returns:
             (user_id, confidence) or (None, 0.0)
         """
-        if self.svm_model is None:
+        # 检查是否有训练数据
+        if self.embeddings is None or self.labels is None:
             return None, 0.0
         
         try:
             # 提取特征
             embedding = self.extract_embedding(face_image)
+            
+            # 特殊情况：只有1个用户时，使用余弦相似度
+            unique_labels = np.unique(self.labels)
+            if len(unique_labels) == 1:
+                # 计算与所有已知特征的余弦相似度
+                similarities = []
+                for known_embedding in self.embeddings:
+                    similarity = np.dot(embedding, known_embedding) / (
+                        np.linalg.norm(embedding) * np.linalg.norm(known_embedding)
+                    )
+                    similarities.append(similarity)
+                
+                # 取最大相似度
+                max_similarity = float(np.max(similarities))
+                
+                # 检查阈值（余弦相似度范围[-1, 1]，转换到[0, 1]）
+                confidence = (max_similarity + 1) / 2
+                
+                if confidence < Config.FACE_RECOGNITION_THRESHOLD:
+                    return None, confidence
+                
+                return int(unique_labels[0]), confidence
+            
+            # 多用户情况：使用SVM
+            if self.svm_model is None:
+                return None, 0.0
             
             # SVM预测
             prediction = self.svm_model.predict([embedding])[0]
@@ -158,6 +185,8 @@ class FaceNetRecognizer:
         
         except Exception as e:
             print(f"识别失败: {e}")
+            import traceback
+            traceback.print_exc()
             return None, 0.0
     
     def recognize_batch(self, face_images: List[np.ndarray]) -> List[Tuple[Optional[int], float]]:
@@ -211,7 +240,16 @@ class FaceNetRecognizer:
         """训练SVM分类器"""
         from sklearn.svm import SVC
         
-        print("训练SVM分类器...")
+        # 检查类别数量
+        unique_labels = np.unique(self.labels)
+        n_classes = len(unique_labels)
+        
+        if n_classes < 2:
+            print(f"⚠️  只有 {n_classes} 个用户，跳过SVM训练（需要至少2个用户）")
+            self.svm_model = None
+            return
+        
+        print(f"训练SVM分类器... ({n_classes} 个用户)")
         self.svm_model = SVC(kernel='linear', probability=True)
         self.svm_model.fit(self.embeddings, self.labels)
         print("✓ SVM训练完成")

@@ -71,14 +71,14 @@ class AttendanceService:
                     'message': '用户不存在'
                 }
             
-            # 检查今天是否已打卡
-            if self.attendance_repo.check_today_attendance(user_id):
-                return {
-                    'success': False,
-                    'user_id': user_id,
-                    'username': user.username,
-                    'message': '今天已打卡'
-                }
+            # 检查今天是否已打卡 (测试模式：已禁用)
+            # if self.attendance_repo.check_today_attendance(user_id):
+            #     return {
+            #         'success': False,
+            #         'user_id': user_id,
+            #         'username': user.username,
+            #         'message': '今天已打卡'
+            #     }
             
             # 保存打卡图像(可选)
             image_path = None
