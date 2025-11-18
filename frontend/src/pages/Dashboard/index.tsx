@@ -2,12 +2,13 @@
  * 仪表盘页面
  */
 import { useEffect, useState } from 'react';
-import { Row, Col, Card, Statistic, Alert, Spin, Space, Tag } from 'antd';
+import { Row, Col, Card, Statistic, Alert, Spin, Space, Tag, Button } from 'antd';
 import {
   UserOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
   RiseOutlined,
+  ReloadOutlined,
 } from '@ant-design/icons';
 import { systemApi, statisticsApi, userApi } from '../../api/client';
 import type { Statistics, SystemStatus } from '../../types';
@@ -27,9 +28,18 @@ const Dashboard = () => {
     try {
       // 并行加载数据
       const [statusRes, statsRes, userStatsRes] = await Promise.all([
-        systemApi.healthCheck(),
-        statisticsApi.getDaily(),
-        userApi.getUserStatistics(),
+        systemApi.healthCheck().catch(err => {
+          console.error('健康检查失败:', err);
+          return { data: { status: 'error', database: 'unknown', models_loaded: false } };
+        }),
+        statisticsApi.getDaily().catch(err => {
+          console.error('统计数据加载失败:', err);
+          return { data: { total: 0, unique_users: 0, attendance_rate: 0, status_distribution: {} } };
+        }),
+        userApi.getUserStatistics().catch(err => {
+          console.error('用户统计失败:', err);
+          return { data: { active: 0 } };
+        }),
       ]);
 
       setSystemStatus(statusRes.data);
@@ -52,10 +62,38 @@ const Dashboard = () => {
 
   return (
     <div>
-      <h1>仪表盘</h1>
+      <Space style={{ width: '100%', justifyContent: 'space-between', marginBottom: 16 }}>
+        <h1 style={{ margin: 0 }}>仪表盘</h1>
+        <Button icon={<ReloadOutlined />} onClick={loadData} loading={loading}>
+          刷新数据
+        </Button>
+      </Space>
+
+      {/* API连接状态 */}
+      <Alert
+        message={
+          <Space>
+            <span>后端API:</span>
+            <Tag color={systemStatus?.status === 'error' ? 'error' : 'success'}>
+              {systemStatus?.status === 'error' ? '连接失败' : '已连接'}
+            </Tag>
+            <span style={{ fontSize: 12, color: '#666' }}>
+              http://localhost:8088
+            </span>
+          </Space>
+        }
+        type={systemStatus?.status === 'error' ? 'error' : 'info'}
+        showIcon
+        style={{ marginBottom: 16 }}
+        description={
+          systemStatus?.status === 'error' 
+            ? '无法连接到后端服务器，请确保后端已启动 (python run.py)' 
+            : undefined
+        }
+      />
 
       {/* 系统状态提示 */}
-      {systemStatus && (
+      {systemStatus && systemStatus.status !== 'error' && (
         <Alert
           message={
             <Space>

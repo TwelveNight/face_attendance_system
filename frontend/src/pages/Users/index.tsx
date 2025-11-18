@@ -14,14 +14,19 @@ import {
   Tag,
   Card,
 } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, UserOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, UserOutlined, CameraOutlined } from '@ant-design/icons';
 import { useUserStore } from '../../store/userStore';
+import { userApi } from '../../api/client';
 import type { User } from '../../types';
 import dayjs from 'dayjs';
+import FaceCapture from '../../components/FaceCapture';
 
 const Users = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [isFaceCaptureOpen, setIsFaceCaptureOpen] = useState(false);
+  const [pendingUserData, setPendingUserData] = useState<any>(null);
+  const [capturingUserId, setCapturingUserId] = useState<number | null>(null);
   const [form] = Form.useForm();
 
   const { users, loading, fetchUsers, createUser, updateUser, deleteUser } = useUserStore();
@@ -65,22 +70,70 @@ const Users = () => {
         // 更新用户
         await updateUser(editingUser.id, values);
         message.success('用户更新成功');
+        handleCloseModal();
+        loadUsers();
       } else {
-        // 创建用户（暂不包含人脸图像）
-        const result = await createUser(values);
-        if (result) {
-          message.success('用户创建成功');
-        } else {
-          message.error('用户创建失败');
-          return;
-        }
+        // 创建新用户 - 先保存数据，然后打开人脸采集
+        setPendingUserData(values);
+        handleCloseModal();
+        setIsFaceCaptureOpen(true);
       }
-
-      handleCloseModal();
-      loadUsers();
     } catch (error) {
       console.error('表单验证失败:', error);
     }
+  };
+
+  // 人脸采集完成
+  const handleFaceCaptureComplete = async (images: string[]) => {
+    console.log('人脸采集完成，图片数量:', images.length);
+    console.log('第一张图片前100字符:', images[0]?.substring(0, 100));
+    
+    try {
+      if (capturingUserId) {
+        // 为现有用户更新人脸
+        console.log('更新用户人脸，用户ID:', capturingUserId);
+        const response = await userApi.updateUserFaces(capturingUserId, images);
+        console.log('更新人脸响应:', response);
+        message.success('人脸更新成功');
+        setCapturingUserId(null);
+      } else if (pendingUserData) {
+        // 创建新用户并包含人脸
+        console.log('创建新用户，数据:', pendingUserData);
+        console.log('包含人脸图片数量:', images.length);
+        
+        const userData = {
+          ...pendingUserData,
+          face_images: images,
+        };
+        console.log('发送到后端的数据:', {
+          username: userData.username,
+          student_id: userData.student_id,
+          face_images_count: userData.face_images.length,
+        });
+        
+        const result = await createUser(userData);
+        console.log('创建用户结果:', result);
+        
+        if (result) {
+          message.success('用户创建成功，人脸已录入');
+        } else {
+          message.error('用户创建失败');
+        }
+        setPendingUserData(null);
+      }
+      setIsFaceCaptureOpen(false);
+      loadUsers();
+    } catch (error: any) {
+      console.error('人脸采集错误详情:', error);
+      console.error('错误响应:', error.response?.data);
+      message.error(`操作失败: ${error.response?.data?.message || error.message}`);
+    }
+  };
+
+  // 打开人脸采集（为现有用户）
+  const handleCaptureFace = (user: User) => {
+    setCapturingUserId(user.id);
+    setIsFaceCaptureOpen(true);
   };
 
   // 删除用户
@@ -130,9 +183,17 @@ const Users = () => {
     {
       title: '操作',
       key: 'action',
-      width: 200,
+      width: 280,
       render: (_: any, record: User) => (
         <Space size="small">
+          <Button
+            type="link"
+            size="small"
+            icon={<CameraOutlined />}
+            onClick={() => handleCaptureFace(record)}
+          >
+            采集人脸
+          </Button>
           <Button
             type="link"
             size="small"
@@ -209,11 +270,24 @@ const Users = () => {
 
           {!editingUser && (
             <div style={{ color: '#999', fontSize: 12, marginTop: -16, marginBottom: 16 }}>
-              提示：创建用户后，可以在考勤打卡页面采集人脸数据
+              提示：点击确定后将打开摄像头进行人脸采集
             </div>
           )}
         </Form>
       </Modal>
+
+      {/* 人脸采集对话框 */}
+      <FaceCapture
+        open={isFaceCaptureOpen}
+        onCancel={() => {
+          setIsFaceCaptureOpen(false);
+          setPendingUserData(null);
+          setCapturingUserId(null);
+        }}
+        onComplete={handleFaceCaptureComplete}
+        minImages={3}
+        maxImages={10}
+      />
     </div>
   );
 };

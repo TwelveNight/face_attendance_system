@@ -20,10 +20,18 @@ const apiClient: AxiosInstance = axios.create({
 // 请求拦截器
 apiClient.interceptors.request.use(
   (config) => {
-    // 可以在这里添加token等
+    console.log('API请求:', config.method?.toUpperCase(), config.url);
+    if (config.data && config.url?.includes('register')) {
+      console.log('注册数据:', {
+        username: config.data.username,
+        student_id: config.data.student_id,
+        face_images_count: config.data.face_images?.length || 0,
+      });
+    }
     return config;
   },
   (error) => {
+    console.error('请求拦截器错误:', error);
     return Promise.reject(error);
   }
 );
@@ -31,9 +39,12 @@ apiClient.interceptors.request.use(
 // 响应拦截器
 apiClient.interceptors.response.use(
   (response) => {
+    console.log('API响应:', response.config.url, '状态:', response.status);
     return response.data;
   },
   (error: AxiosError<ApiResponse>) => {
+    console.error('API错误:', error.config?.url, error.response?.status);
+    console.error('错误详情:', error.response?.data);
     const message = error.response?.data?.message || error.message || '请求失败';
     return Promise.reject(new Error(message));
   }
