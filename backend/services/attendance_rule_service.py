@@ -24,7 +24,7 @@ class AttendanceRuleService:
         query = AttendanceRule.query
         if not include_inactive:
             query = query.filter_by(is_active=True)
-        return query.order_by(AttendanceRule.sort_order, AttendanceRule.id).all()
+        return query.order_by(AttendanceRule.id).all()
     
     @staticmethod
     def get_rule_by_id(rule_id: int) -> Optional[AttendanceRule]:
