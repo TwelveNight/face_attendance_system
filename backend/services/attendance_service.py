@@ -13,6 +13,7 @@ from database.repositories import AttendanceRepository, UserRepository, SystemLo
 from database.models import Attendance
 from config.settings import Config
 from .face_service import FaceService
+from .attendance_rule_service import AttendanceRuleService
 
 
 class AttendanceService:
@@ -24,6 +25,7 @@ class AttendanceService:
         self.user_repo = UserRepository
         self.log_repo = SystemLogRepository
         self.face_service = FaceService()
+        self.rule_service = AttendanceRuleService()
     
     def check_in(self, image: np.ndarray, status: str = 'present') -> Optional[Dict]:
         """
@@ -91,6 +93,34 @@ class AttendanceService:
             #         'message': '今天已打卡'
             #     }
             
+            # 获取用户的考勤规则
+            rule = self.rule_service.get_rule_for_user(user_id)
+            check_time = datetime.now()
+            
+            # 根据规则判断考勤状态
+            rule_result = None
+            rule_id = None
+            is_late = False
+            is_early = False
+            
+            if rule:
+                rule_id = rule.id
+                # 默认为上班打卡
+                rule_result = self.rule_service.check_attendance_status(
+                    rule, check_time, 'checkin'
+                )
+                status = rule_result['status']
+                is_late = rule_result['is_late']
+                is_early = rule_result['is_early']
+                
+                print(f"\n📋 规则检查:")
+                print(f"  - 规则: {rule.name}")
+                print(f"  - 状态: {status}")
+                print(f"  - 迟到: {is_late}")
+                print(f"  - 消息: {rule_result['message']}")
+            else:
+                print(f"\n⚠️ 未找到适用规则，使用默认状态")
+            
             # 保存打卡图像(可选)
             image_path = None
             # TODO: 实现图像保存逻辑
@@ -100,7 +130,11 @@ class AttendanceService:
                 user_id=user_id,
                 status=status,
                 confidence=confidence,
-                image_path=image_path
+                image_path=image_path,
+                rule_id=rule_id,
+                is_late=is_late,
+                is_early=is_early,
+                check_type='checkin'
             )
             
             # 记录日志
@@ -114,7 +148,11 @@ class AttendanceService:
             print(f"  - 用户: {user.username}")
             print(f"  - 置信度: {confidence:.6f} (完整)")
             print(f"  - 置信度: {confidence:.2f} (显示)")
+            print(f"  - 状态: {status}")
             print(f"{'='*70}\n")
+            
+            # 构建返回消息
+            message = rule_result['message'] if rule_result else '打卡成功'
             
             return {
                 'success': True,
@@ -122,7 +160,10 @@ class AttendanceService:
                 'username': user.username,
                 'student_id': user.student_id,
                 'confidence': confidence,
-                'message': '打卡成功',
+                'status': status,
+                'is_late': is_late,
+                'is_early': is_early,
+                'message': message,
                 'attendance': attendance
             }
         

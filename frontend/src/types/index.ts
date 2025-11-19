@@ -113,6 +113,9 @@ export interface CheckInResult {
   student_id?: string;
   confidence?: number;
   timestamp?: string;
+  status?: string;
+  is_late?: boolean;
+  is_early?: boolean;
   message: string;
 }
 

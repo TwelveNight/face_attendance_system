@@ -54,7 +54,7 @@ const AttendanceRules = () => {
   const loadRules = async () => {
     setLoading(true);
     try {
-      const response = await attendanceRuleApi.getAll(false);
+      const response = await attendanceRuleApi.getAll(true); // 包含未启用的规则
       setRules(response.data || []);
     } catch (error: any) {
       message.error(error.message || '加载规则失败');

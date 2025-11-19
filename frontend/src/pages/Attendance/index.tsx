@@ -123,7 +123,12 @@ const Attendance = () => {
         const result = await checkIn(imageData);
 
         if (result?.success) {
-          message.success(`打卡成功！欢迎 ${result.username}`);
+          // 根据状态显示不同的消息
+          if (result.is_late) {
+            message.warning(`${result.message} - ${result.username}`);
+          } else {
+            message.success(`${result.message} - ${result.username}`);
+          }
           setCheckInResult(result);
           // 停止摄像头
           stopCamera();
@@ -353,15 +358,16 @@ const Attendance = () => {
         ) : (
           // 打卡结果显示
           <Result
-            status={checkInResult.success ? 'success' : 'error'}
-            title={checkInResult.success ? '打卡成功！' : '打卡失败'}
+            status={checkInResult.success ? (checkInResult.is_late ? 'warning' : 'success') : 'error'}
+            title={checkInResult.success ? (checkInResult.is_late ? '打卡成功（迟到）' : '打卡成功！') : '打卡失败'}
             subTitle={
               checkInResult.success ? (
                 <div>
                   <p>用户：{checkInResult.username}</p>
                   <p>学号：{checkInResult.student_id}</p>
-                  <p>识别置信度：{(checkInResult.confidence * 100).toFixed(1)}%</p>
-                  <p>时间：{new Date(checkInResult.timestamp).toLocaleString('zh-CN')}</p>
+                  <p>识别置信度：{(checkInResult.confidence! * 100).toFixed(1)}%</p>
+                  <p>状态：{checkInResult.message}</p>
+                  <p>时间：{new Date().toLocaleString('zh-CN')}</p>
                 </div>
               ) : (
                 <p>{checkInResult.message}</p>
