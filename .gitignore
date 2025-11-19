@@ -80,3 +80,9 @@ frontend/build/
 *.pt
 
 *.db
+
+# 测试和临时文档
+*_TEST*.md
+QUICK_TEST_GUIDE.md
+TEST_STAGE2.md
+TROUBLESHOOTING_*.md
