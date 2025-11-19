@@ -2,7 +2,7 @@
  * 统计分析页面
  */
 import { useEffect, useState } from 'react';
-import { Card, Row, Col, Statistic, DatePicker, Space, Spin, Select, Progress, Divider } from 'antd';
+import { Card, Row, Col, Statistic, DatePicker, Space, Spin, Select, Progress, Divider, Button, message } from 'antd';
 import { 
   BarChartOutlined, 
   UserOutlined, 
@@ -11,7 +11,8 @@ import {
   CloseCircleOutlined,
   LoginOutlined,
   LogoutOutlined,
-  TeamOutlined
+  TeamOutlined,
+  DownloadOutlined
 } from '@ant-design/icons';
 import { statisticsApi, departmentApi, attendanceApi } from '../../api/client';
 import type { Statistics as StatsType, Department, Attendance } from '../../types';
@@ -67,6 +68,70 @@ const Statistics = () => {
     return result;
   };
 
+  // 导出统计报表
+  const handleExport = () => {
+    if (!dailyStats || attendanceList.length === 0) {
+      message.warning('没有数据可导出');
+      return;
+    }
+
+    try {
+      const dateStr = selectedDate.format('YYYY年MM月DD日');
+      
+      // 生成CSV内容
+      const lines = [
+        `考勤统计报表 - ${dateStr}`,
+        '',
+        '基本统计',
+        `总打卡次数,${dailyStats.total}`,
+        `出勤人数,${dailyStats.unique_users}`,
+        `出勤率,${dailyStats.attendance_rate}%`,
+        `应到人数,${Math.ceil(dailyStats.unique_users / (dailyStats.attendance_rate / 100))}`,
+        '',
+        '打卡类型统计',
+        `上班打卡,${attendanceList.filter(a => a.check_type === 'checkin').length}次`,
+        `下班打卡,${attendanceList.filter(a => a.check_type === 'checkout').length}次`,
+        `上班打卡率,${dailyStats.unique_users ? (attendanceList.filter(a => a.check_type === 'checkin').length / dailyStats.unique_users * 100).toFixed(1) : 0}%`,
+        `下班打卡率,${dailyStats.unique_users ? (attendanceList.filter(a => a.check_type === 'checkout').length / dailyStats.unique_users * 100).toFixed(1) : 0}%`,
+        '',
+        '考勤状态分布',
+        `正常打卡,${dailyStats.status_distribution?.present || 0}次`,
+        `迟到次数,${dailyStats.status_distribution?.late || 0}次`,
+        `缺勤次数,${dailyStats.status_distribution?.absent || 0}次`,
+        `早退次数,${attendanceList.filter(a => a.is_early).length}次`,
+        '',
+        '详细记录',
+        'ID,用户名,学号,打卡时间,打卡类型,状态,置信度',
+        ...attendanceList.map(record => [
+          record.id,
+          record.username || '-',
+          record.student_id || '-',
+          dayjs(record.timestamp).format('YYYY-MM-DD HH:mm:ss'),
+          record.check_type === 'checkin' ? '上班' : '下班',
+          record.status === 'present' ? '正常' : record.status === 'late' ? '迟到' : '缺勤',
+          record.confidence ? `${(record.confidence * 100).toFixed(1)}%` : '-'
+        ].join(','))
+      ];
+
+      const csvContent = lines.join('\n');
+
+      // 下载文件
+      const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `考勤统计报表_${selectedDate.format('YYYYMMDD')}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      message.success('导出成功');
+    } catch (error) {
+      console.error('导出失败:', error);
+      message.error('导出失败');
+    }
+  };
+
   const loadStatistics = async () => {
     setLoading(true);
     try {
@@ -87,20 +152,8 @@ const Statistics = () => {
         params.department_id = departmentFilter;
       }
       
-      console.log('🔍 请求参数:', params);
       const attendanceResponse = await attendanceApi.getHistory(params);
-      console.log('📦 API完整响应:', attendanceResponse);
-      
-      const items = attendanceResponse.data?.items || [];
-      console.log('📊 考勤记录加载:', {
-        日期: dateStr,
-        总数: items.length,
-        上班打卡: items.filter((a: Attendance) => a.check_type === 'checkin').length,
-        下班打卡: items.filter((a: Attendance) => a.check_type === 'checkout').length,
-        示例数据: items.slice(0, 2),
-        完整数据: items
-      });
-      setAttendanceList(items);
+      setAttendanceList(attendanceResponse.data?.items || []);
     } catch (error) {
       console.error('加载统计数据失败:', error);
     } finally {
@@ -150,6 +203,14 @@ const Statistics = () => {
               onChange={(date) => date && setSelectedDate(date)}
               placeholder="选择日期"
             />
+            <Button
+              type="primary"
+              icon={<DownloadOutlined />}
+              onClick={handleExport}
+              disabled={!dailyStats || attendanceList.length === 0}
+            >
+              导出报表
+            </Button>
           </Space>
         }
       >

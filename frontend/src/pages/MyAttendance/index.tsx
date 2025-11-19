@@ -3,8 +3,8 @@
  * 显示当前登录用户的考勤记录
  */
 import { useEffect, useState } from 'react';
-import { Table, Card, DatePicker, Space, Tag, Statistic, Row, Col, message } from 'antd';
-import { ClockCircleOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
+import { Table, Card, DatePicker, Space, Tag, Statistic, Row, Col, message, Button } from 'antd';
+import { ClockCircleOutlined, CheckCircleOutlined, CloseCircleOutlined, DownloadOutlined } from '@ant-design/icons';
 import { attendanceApi } from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import type { Attendance } from '../../types';
@@ -61,6 +61,56 @@ export default function MyAttendance() {
   const attendanceRate = statistics.total > 0 
     ? ((statistics.present + statistics.late) / statistics.total * 100).toFixed(1)
     : '0.0';
+
+  // 导出Excel
+  const handleExport = () => {
+    if (attendanceList.length === 0) {
+      message.warning('没有数据可导出');
+      return;
+    }
+
+    // 生成CSV内容
+    const headers = ['日期', '时间', '打卡类型', '状态', '置信度', '备注'];
+    const rows = attendanceList.map(record => [
+      dayjs(record.timestamp).format('YYYY-MM-DD'),
+      dayjs(record.timestamp).format('HH:mm:ss'),
+      record.check_type === 'checkin' ? '上班' : '下班',
+      record.status === 'present' ? '正常' : record.status === 'late' ? '迟到' : '缺勤',
+      record.confidence ? `${(record.confidence * 100).toFixed(1)}%` : '-',
+      record.notes || '-'
+    ]);
+
+    // 添加统计信息
+    const statsRows = [
+      [],
+      ['统计信息'],
+      ['总打卡次数', statistics.total],
+      ['正常打卡', statistics.present],
+      ['迟到次数', statistics.late],
+      ['缺勤次数', statistics.absent],
+      ['上班打卡', statistics.checkin],
+      ['下班打卡', statistics.checkout],
+      ['出勤率', `${attendanceRate}%`]
+    ];
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.join(',')),
+      ...statsRows.map(row => row.join(','))
+    ].join('\n');
+
+    // 下载文件
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `我的考勤_${dateRange[0].format('YYYYMMDD')}_${dateRange[1].format('YYYYMMDD')}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    message.success('导出成功');
+  };
 
   // 表格列定义
   const columns = [
@@ -131,15 +181,25 @@ export default function MyAttendance() {
           </Space>
         }
         extra={
-          <RangePicker
-            value={dateRange}
-            onChange={(dates) => {
-              if (dates && dates[0] && dates[1]) {
-                setDateRange([dates[0], dates[1]]);
-              }
-            }}
-            format="YYYY-MM-DD"
-          />
+          <Space>
+            <RangePicker
+              value={dateRange}
+              onChange={(dates) => {
+                if (dates && dates[0] && dates[1]) {
+                  setDateRange([dates[0], dates[1]]);
+                }
+              }}
+              format="YYYY-MM-DD"
+            />
+            <Button 
+              type="primary" 
+              icon={<DownloadOutlined />}
+              onClick={handleExport}
+              disabled={attendanceList.length === 0}
+            >
+              导出报表
+            </Button>
+          </Space>
         }
       >
         {/* 统计卡片 */}

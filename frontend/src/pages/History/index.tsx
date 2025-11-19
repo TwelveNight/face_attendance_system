@@ -116,24 +116,43 @@ const History = () => {
   };
 
   // 导出CSV
-  const handleExport = async () => {
-    if (!dateRange) {
+  const handleExport = () => {
+    if (records.length === 0) {
       return;
     }
+    
     try {
-      const blob = await attendanceApi.exportCSV(
-        dateRange[0].format('YYYY-MM-DD'),
-        dateRange[1].format('YYYY-MM-DD')
-      );
-      // 创建下载链接
-      const url = window.URL.createObjectURL(blob as any);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `attendance_${dateRange[0].format('YYYYMMDD')}_${dateRange[1].format('YYYYMMDD')}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      // 生成CSV内容
+      const headers = ['ID', '用户名', '学号', '打卡日期', '打卡时间', '打卡类型', '状态', '置信度'];
+      const rows = records.map(record => [
+        record.id,
+        record.username || '-',
+        record.student_id || '-',
+        dayjs(record.timestamp).format('YYYY-MM-DD'),
+        dayjs(record.timestamp).format('HH:mm:ss'),
+        record.check_type === 'checkin' ? '上班' : '下班',
+        record.status === 'present' ? '正常' : record.status === 'late' ? '迟到' : '缺勤',
+        record.confidence ? `${(record.confidence * 100).toFixed(1)}%` : '-'
+      ]);
+
+      const csvContent = [
+        headers.join(','),
+        ...rows.map(row => row.join(','))
+      ].join('\n');
+
+      // 下载文件
+      const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const filename = dateRange 
+        ? `考勤历史_${dateRange[0].format('YYYYMMDD')}_${dateRange[1].format('YYYYMMDD')}.csv`
+        : `考勤历史_${dayjs().format('YYYYMMDD')}.csv`;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
     } catch (error) {
       console.error('导出失败:', error);
     }
@@ -277,7 +296,7 @@ const History = () => {
           <Button
             icon={<DownloadOutlined />}
             onClick={handleExport}
-            disabled={!dateRange}
+            disabled={records.length === 0}
           >
             导出CSV
           </Button>
