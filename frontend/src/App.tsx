@@ -7,6 +7,10 @@ import Attendance from './pages/Attendance';
 import Users from './pages/Users';
 import History from './pages/History';
 import Statistics from './pages/Statistics';
+import AdminLogin from './pages/AdminLogin';
+import UserLogin from './pages/UserLogin';
+import SetPassword from './pages/SetPassword';
+import { AdminRoute } from './components/PrivateRoute';
 import './App.css';
 
 function App() {
@@ -22,13 +26,24 @@ function App() {
     >
       <BrowserRouter>
         <Routes>
+          {/* 登录页面（独立路由） */}
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/login" element={<UserLogin />} />
+          <Route path="/set-password" element={<SetPassword />} />
+          
+          {/* 主应用路由 */}
           <Route path="/" element={<MainLayout />}>
-            <Route index element={<Navigate to="/dashboard" replace />} />
-            <Route path="dashboard" element={<Dashboard />} />
+            {/* 默认跳转到考勤打卡 */}
+            <Route index element={<Navigate to="/attendance" replace />} />
+            
+            {/* 公开路由 - 考勤打卡 */}
             <Route path="attendance" element={<Attendance />} />
-            <Route path="users" element={<Users />} />
-            <Route path="history" element={<History />} />
-            <Route path="statistics" element={<Statistics />} />
+            
+            {/* 管理员路由 */}
+            <Route path="dashboard" element={<AdminRoute><Dashboard /></AdminRoute>} />
+            <Route path="users" element={<AdminRoute><Users /></AdminRoute>} />
+            <Route path="history" element={<AdminRoute><History /></AdminRoute>} />
+            <Route path="statistics" element={<AdminRoute><Statistics /></AdminRoute>} />
           </Route>
         </Routes>
       </BrowserRouter>

@@ -21,6 +21,13 @@ const apiClient: AxiosInstance = axios.create({
 apiClient.interceptors.request.use(
   (config) => {
     console.log('API请求:', config.method?.toUpperCase(), config.url);
+    
+    // 添加Token到请求头
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    
     if (config.data && config.url?.includes('register')) {
       console.log('注册数据:', {
         username: config.data.username,
@@ -49,6 +56,78 @@ apiClient.interceptors.response.use(
     return Promise.reject(new Error(message));
   }
 );
+
+// ==================== 认证API ====================
+
+export const authApi = {
+  // 管理员登录
+  adminLogin: (username: string, password: string) => {
+    return apiClient.post<any, ApiResponse<{ token: string; admin: any }>>('/api/admin/login', {
+      username,
+      password,
+    });
+  },
+
+  // 管理员登出
+  adminLogout: () => {
+    return apiClient.post<any, ApiResponse>('/api/admin/logout');
+  },
+
+  // 获取当前管理员信息
+  getAdminInfo: () => {
+    return apiClient.get<any, ApiResponse<any>>('/api/admin/me');
+  },
+
+  // 修改管理员密码
+  changeAdminPassword: (oldPassword: string, newPassword: string) => {
+    return apiClient.put<any, ApiResponse>('/api/admin/password', {
+      old_password: oldPassword,
+      new_password: newPassword,
+    });
+  },
+
+  // 普通用户登录
+  userLogin: (username: string, password: string) => {
+    return apiClient.post<any, ApiResponse<{ token: string; user: User }>>('/api/auth/login', {
+      username,
+      password,
+    });
+  },
+
+  // 普通用户登出
+  userLogout: () => {
+    return apiClient.post<any, ApiResponse>('/api/auth/logout');
+  },
+
+  // 获取当前用户信息
+  getUserInfo: () => {
+    return apiClient.get<any, ApiResponse<User>>('/api/auth/me');
+  },
+
+  // 修改用户密码
+  changeUserPassword: (oldPassword: string, newPassword: string) => {
+    return apiClient.put<any, ApiResponse>('/api/auth/password', {
+      old_password: oldPassword,
+      new_password: newPassword,
+    });
+  },
+
+  // 首次设置密码
+  setPassword: (username: string, studentId: string, newPassword: string) => {
+    return apiClient.post<any, ApiResponse>('/api/auth/set-password', {
+      username,
+      student_id: studentId,
+      new_password: newPassword,
+    });
+  },
+
+  // 检查密码状态
+  checkPassword: (username: string) => {
+    return apiClient.post<any, ApiResponse<{ has_password: boolean; username: string; student_id: string }>>('/api/auth/check-password', {
+      username,
+    });
+  },
+};
 
 // ==================== 用户管理API ====================
 
