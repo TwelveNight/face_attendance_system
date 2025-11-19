@@ -1,0 +1,8 @@
+.departments-container {
+  padding: 24px;
+}
+
+.departments-container .ant-card {
+  height: calc(100vh - 150px);
+  overflow-y: auto;
+}

@@ -99,7 +99,19 @@ class Department(db.Model):
     # 关系
     children = db.relationship('Department', backref=db.backref('parent', remote_side=[id]), lazy='dynamic')
     users = db.relationship('User', backref='department', lazy='dynamic', foreign_keys='User.department_id')
+    manager = db.relationship('User', foreign_keys=[manager_id], uselist=False)
     rules = db.relationship('AttendanceRule', backref='department', lazy='dynamic')
+    
+    def get_total_user_count(self):
+        """
+        获取部门总人数（包含所有子部门）
+        递归统计本部门及所有子部门的用户数
+        """
+        count = self.users.count()  # 本部门的用户数
+        # 递归统计所有子部门的用户数
+        for child in self.children:
+            count += child.get_total_user_count()
+        return count
     
     def to_dict(self, include_children=False):
         """转换为字典"""
@@ -114,7 +126,7 @@ class Department(db.Model):
             'level': self.level,
             'sort_order': self.sort_order,
             'is_active': self.is_active,
-            'user_count': self.users.count(),
+            'user_count': self.get_total_user_count(),  # 使用递归统计
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
         if include_children:

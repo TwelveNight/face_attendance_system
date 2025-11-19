@@ -2,6 +2,36 @@
  * 类型定义
  */
 
+// 管理员类型
+export interface Admin {
+  id: number;
+  username: string;
+  real_name?: string;
+  email?: string;
+  phone?: string;
+  is_super: boolean;
+  is_active: boolean;
+  last_login_at?: string;
+  created_at: string;
+}
+
+// 部门类型
+export interface Department {
+  id: number;
+  name: string;
+  code?: string;
+  parent_id?: number;
+  manager_id?: number;
+  manager_name?: string;
+  description?: string;
+  level: number;
+  sort_order: number;
+  is_active: boolean;
+  user_count: number;
+  created_at: string;
+  children?: Department[];
+}
+
 // 用户类型
 export interface User {
   id: number;

@@ -158,6 +158,10 @@ def get_history():
         if status:
             filters['status'] = status
         
+        department_id = request.args.get('department_id')
+        if department_id:
+            filters['department_id'] = int(department_id)
+        
         start_date = request.args.get('start_date')
         end_date = request.args.get('end_date')
         if start_date and end_date:

@@ -14,6 +14,7 @@ import {
   LoginOutlined,
   LogoutOutlined,
   DownOutlined,
+  ApartmentOutlined,
 } from '@ant-design/icons';
 import { useAuthStore } from '../../store/authStore';
 
@@ -62,6 +63,11 @@ const MainLayout = () => {
           label: '用户管理',
         },
         {
+          key: '/departments',
+          icon: <ApartmentOutlined />,
+          label: '部门管理',
+        },
+        {
           key: '/history',
           icon: <ClockCircleOutlined />,
           label: '考勤历史',
@@ -100,31 +106,47 @@ const MainLayout = () => {
     navigate(key);
   };
 
-  // 用户菜单
-  const userMenuItems: MenuProps['items'] = [
-    {
-      key: 'profile',
-      icon: <UserOutlined />,
-      label: '个人信息',
-    },
-    {
-      type: 'divider',
-    },
-    {
-      key: 'logout',
-      icon: <LogoutOutlined />,
-      label: '登出',
-      danger: true,
-    },
-  ];
+  // 用户菜单 - 根据用户类型显示不同菜单
+  const getUserMenuItems = (): MenuProps['items'] => {
+    if (userType === 'admin') {
+      // 管理员只显示登出
+      return [
+        {
+          key: 'logout',
+          icon: <LogoutOutlined />,
+          label: '登出',
+          danger: true,
+        },
+      ];
+    }
+    
+    // 普通用户显示个人信息和登出
+    return [
+      {
+        key: 'profile',
+        icon: <UserOutlined />,
+        label: '个人信息',
+      },
+      {
+        type: 'divider',
+      },
+      {
+        key: 'logout',
+        icon: <LogoutOutlined />,
+        label: '登出',
+        danger: true,
+      },
+    ];
+  };
 
   const handleUserMenuClick = ({ key }: { key: string }) => {
     if (key === 'logout') {
       logout();
       message.success('已登出');
-      navigate('/admin/login');
+      // 根据用户类型跳转到不同的登录页
+      navigate(userType === 'admin' ? '/admin/login' : '/login');
     } else if (key === 'profile') {
-      message.info('个人信息功能开发中');
+      navigate('/profile');
     }
   };
 
@@ -173,7 +195,7 @@ const MainLayout = () => {
               })}
             </div>
             {isAuthenticated ? (
-              <Dropdown menu={{ items: userMenuItems, onClick: handleUserMenuClick }} placement="bottomRight">
+              <Dropdown menu={{ items: getUserMenuItems(), onClick: handleUserMenuClick }} placement="bottomRight">
                 <Button type="text">
                   {userType === 'admin' ? '👑 ' : ''}
                   {currentUser?.real_name || currentUser?.username || '用户'} <DownOutlined />

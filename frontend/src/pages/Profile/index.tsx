@@ -68,7 +68,10 @@ export default function Profile() {
               <Descriptions.Item label="学号">
                 {currentUser.student_id || '-'}
               </Descriptions.Item>
-              <Descriptions.Item label="职位/班级">
+              <Descriptions.Item label="所属部门" span={2}>
+                {currentUser.department_name || '-'}
+              </Descriptions.Item>
+              <Descriptions.Item label="职位">
                 {currentUser.position || '-'}
               </Descriptions.Item>
               <Descriptions.Item label="邮箱">

@@ -161,6 +161,22 @@ class AttendanceRepository:
                 query = query.filter_by(user_id=filters['user_id'])
             if 'status' in filters:
                 query = query.filter_by(status=filters['status'])
+            if 'department_id' in filters:
+                # 筛选指定部门及其所有子部门的用户
+                from database.models_v3 import Department
+                dept = Department.query.get(filters['department_id'])
+                if dept:
+                    # 获取该部门及所有子部门的ID
+                    dept_ids = [dept.id]
+                    def get_child_ids(parent_id):
+                        children = Department.query.filter_by(parent_id=parent_id).all()
+                        for child in children:
+                            dept_ids.append(child.id)
+                            get_child_ids(child.id)
+                    get_child_ids(dept.id)
+                    
+                    # 筛选这些部门的用户
+                    query = query.join(User).filter(User.department_id.in_(dept_ids))
             if 'start_date' in filters and 'end_date' in filters:
                 query = query.filter(
                     and_(
@@ -182,9 +198,33 @@ class AttendanceRepository:
         }
     
     @staticmethod
-    def get_statistics(start_date: datetime, end_date: datetime) -> Dict:
+    def get_statistics(start_date: datetime, end_date: datetime, department_id: Optional[int] = None) -> Dict:
         """获取统计数据"""
-        records = AttendanceRepository.get_by_date_range(start_date, end_date)
+        query = Attendance.query.filter(
+            and_(
+                Attendance.timestamp >= start_date,
+                Attendance.timestamp < end_date
+            )
+        )
+        
+        # 如果指定了部门，筛选该部门及其子部门的用户
+        if department_id:
+            from database.models_v3 import Department
+            dept = Department.query.get(department_id)
+            if dept:
+                # 获取该部门及所有子部门的ID
+                dept_ids = [dept.id]
+                def get_child_ids(parent_id):
+                    children = Department.query.filter_by(parent_id=parent_id).all()
+                    for child in children:
+                        dept_ids.append(child.id)
+                        get_child_ids(child.id)
+                get_child_ids(dept.id)
+                
+                # 筛选这些部门的用户
+                query = query.join(User).filter(User.department_id.in_(dept_ids))
+        
+        records = query.all()
         
         total = len(records)
         status_count = {}

@@ -12,6 +12,7 @@ import UserLogin from './pages/UserLogin';
 import SetPassword from './pages/SetPassword';
 import MyAttendance from './pages/MyAttendance';
 import Profile from './pages/Profile';
+import Departments from './pages/Departments';
 import { AdminRoute, UserRoute } from './components/PrivateRoute';
 import './App.css';
 
@@ -48,6 +49,7 @@ function App() {
             {/* 管理员路由 */}
             <Route path="dashboard" element={<AdminRoute><Dashboard /></AdminRoute>} />
             <Route path="users" element={<AdminRoute><Users /></AdminRoute>} />
+            <Route path="departments" element={<AdminRoute><Departments /></AdminRoute>} />
             <Route path="history" element={<AdminRoute><History /></AdminRoute>} />
             <Route path="statistics" element={<AdminRoute><Statistics /></AdminRoute>} />
           </Route>

@@ -4,8 +4,8 @@
 import { useEffect, useState } from 'react';
 import { Table, Card, Space, DatePicker, Select, Button, Tag } from 'antd';
 import { ClockCircleOutlined, DownloadOutlined, ReloadOutlined } from '@ant-design/icons';
-import { attendanceApi } from '../../api/client';
-import type { Attendance } from '../../types';
+import { attendanceApi, departmentApi } from '../../api/client';
+import type { Attendance, Department } from '../../types';
 import dayjs, { type Dayjs } from 'dayjs';
 
 const { RangePicker } = DatePicker;
@@ -18,10 +18,50 @@ const History = () => {
   const [pageSize, setPageSize] = useState(20);
   const [dateRange, setDateRange] = useState<[Dayjs, Dayjs] | null>(null);
   const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
+  const [departmentFilter, setDepartmentFilter] = useState<number | undefined>(undefined);
+  const [departments, setDepartments] = useState<Department[]>([]);
 
   useEffect(() => {
     loadRecords();
+    loadDepartments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, pageSize]);
+
+  const loadDepartments = async () => {
+    try {
+      const response = await departmentApi.getAll(false);
+      const depts = response.data || [];
+      
+      // 按层级和排序字段排序，确保父部门在子部门前面
+      const sortedDepts = sortDepartments(depts);
+      setDepartments(sortedDepts);
+    } catch (error: any) {
+      console.error('获取部门列表失败:', error);
+    }
+  };
+
+  // 递归排序部门，确保树形结构的顺序
+  const sortDepartments = (depts: Department[]) => {
+    const result: Department[] = [];
+    
+    // 找出所有根部门（一级部门）
+    const roots = depts.filter(d => !d.parent_id).sort((a, b) => a.sort_order - b.sort_order);
+    
+    // 递归添加部门及其子部门
+    const addDeptWithChildren = (dept: Department) => {
+      result.push(dept);
+      // 找出当前部门的所有子部门
+      const children = depts
+        .filter(d => d.parent_id === dept.id)
+        .sort((a, b) => a.sort_order - b.sort_order);
+      children.forEach(child => addDeptWithChildren(child));
+    };
+    
+    // 从根部门开始递归添加
+    roots.forEach(root => addDeptWithChildren(root));
+    
+    return result;
+  };
 
   const loadRecords = async () => {
     setLoading(true);
@@ -38,6 +78,10 @@ const History = () => {
 
       if (statusFilter) {
         params.status = statusFilter;
+      }
+
+      if (departmentFilter) {
+        params.department_id = departmentFilter;
       }
 
       const response = await attendanceApi.getHistory(params);
@@ -60,6 +104,7 @@ const History = () => {
   const handleReset = () => {
     setDateRange(null);
     setStatusFilter(undefined);
+    setDepartmentFilter(undefined);
     setPage(1);
     loadRecords();
   };
@@ -169,6 +214,24 @@ const History = () => {
               { label: '缺勤', value: 'absent' },
             ]}
           />
+          <Select
+            style={{ width: 200 }}
+            placeholder="部门筛选"
+            allowClear
+            showSearch
+            optionFilterProp="children"
+            value={departmentFilter}
+            onChange={setDepartmentFilter}
+          >
+            {departments.map(dept => {
+              const indent = dept.level === 1 ? '' : dept.level === 2 ? '├─ ' : '│  └─ ';
+              return (
+                <Select.Option key={dept.id} value={dept.id}>
+                  {indent}{dept.name}
+                </Select.Option>
+              );
+            })}
+          </Select>
           <Button type="primary" onClick={handleFilter}>
             查询
           </Button>

@@ -70,6 +70,7 @@ def register_blueprints(app):
     from api.routes import user_bp, attendance_bp, statistics_bp, video_bp, system_bp
     from api.routes.admin_auth import admin_auth_bp
     from api.routes.user_auth import user_auth_bp
+    from api.routes.department import department_bp
     
     # 原有路由
     app.register_blueprint(user_bp, url_prefix='/api/users')
@@ -81,6 +82,9 @@ def register_blueprints(app):
     # V3.0 新增：认证路由
     app.register_blueprint(admin_auth_bp)  # /api/admin/*
     app.register_blueprint(user_auth_bp)   # /api/auth/*
+    
+    # V3.0 新增：部门管理路由
+    app.register_blueprint(department_bp)  # /api/departments/*
     
     app.logger.info("路由注册完成")
 

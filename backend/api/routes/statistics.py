@@ -16,13 +16,15 @@ def get_daily():
     """每日统计"""
     try:
         date_str = request.args.get('date')
+        department_id = request.args.get('department_id')
         
         if date_str:
             date = datetime.fromisoformat(date_str)
         else:
             date = None
         
-        stats = attendance_service.get_daily_statistics(date)
+        dept_id = int(department_id) if department_id else None
+        stats = attendance_service.get_daily_statistics(date, dept_id)
         
         return success_response(stats)
     

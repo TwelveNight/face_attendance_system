@@ -249,6 +249,13 @@ export const statisticsApi = {
     });
   },
 
+  // 每日统计（带部门筛选）
+  getDailyWithDept: (date?: string, departmentId?: number) => {
+    return apiClient.get<any, ApiResponse<Statistics>>('/api/statistics/daily', {
+      params: { date, department_id: departmentId },
+    });
+  },
+
   // 周统计
   getWeekly: (startDate?: string) => {
     return apiClient.get<any, ApiResponse<Statistics>>('/api/statistics/weekly', {
@@ -294,6 +301,53 @@ export const systemApi = {
   // 系统配置
   getConfig: () => {
     return apiClient.get<any, ApiResponse<any>>('/api/system/config');
+  },
+};
+
+// ==================== 部门API ====================
+
+export const departmentApi = {
+  // 获取部门列表
+  getAll: (tree: boolean = false, includeInactive: boolean = false) => {
+    return apiClient.get<any, ApiResponse<any>>('/api/departments', {
+      params: { tree, include_inactive: includeInactive },
+    });
+  },
+
+  // 获取部门详情
+  getById: (id: number) => {
+    return apiClient.get<any, ApiResponse<any>>(`/api/departments/${id}`);
+  },
+
+  // 创建部门
+  create: (data: any) => {
+    return apiClient.post<any, ApiResponse<any>>('/api/departments', data);
+  },
+
+  // 更新部门
+  update: (id: number, data: any) => {
+    return apiClient.put<any, ApiResponse<any>>(`/api/departments/${id}`, data);
+  },
+
+  // 删除部门
+  delete: (id: number, force: boolean = false) => {
+    return apiClient.delete<any, ApiResponse>(`/api/departments/${id}`, {
+      params: { force },
+    });
+  },
+
+  // 获取部门下的用户
+  getUsers: (id: number, includeChildren: boolean = false) => {
+    return apiClient.get<any, ApiResponse<User[]>>(`/api/departments/${id}/users`, {
+      params: { include_children: includeChildren },
+    });
+  },
+
+  // 搜索部门
+  search: (keyword: string) => {
+    return apiClient.get<any, ApiResponse<any[]>>('/api/departments/search', {
+      params: { keyword },
+    });
   },
 };
 

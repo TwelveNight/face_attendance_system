@@ -13,12 +13,13 @@ import {
   Popconfirm,
   Tag,
   Card,
+  Select,
 } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, UserOutlined, CameraOutlined, LockOutlined } from '@ant-design/icons';
 import { useAuthStore } from '../../store/authStore';
 import { useUserStore } from '../../store/userStore';
-import { userApi } from '../../api/client';
-import type { User } from '../../types';
+import { userApi, departmentApi } from '../../api/client';
+import type { User, Department } from '../../types';
 import dayjs from 'dayjs';
 import FaceCapture from '../../components/FaceCapture';
 
@@ -30,6 +31,8 @@ const Users = () => {
   const [capturingUserId, setCapturingUserId] = useState<number | null>(null);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [passwordUserId, setPasswordUserId] = useState<number | null>(null);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [selectedDepartment, setSelectedDepartment] = useState<number | undefined>();
   const [form] = Form.useForm();
   const [passwordForm] = Form.useForm();
   
@@ -39,11 +42,48 @@ const Users = () => {
 
   useEffect(() => {
     loadUsers();
+    loadDepartments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadUsers = () => {
     fetchUsers();
+  };
+
+  const loadDepartments = async () => {
+    try {
+      const response = await departmentApi.getAll(false);
+      const depts = response.data || [];
+      
+      // 按层级和排序字段排序，确保父部门在子部门前面
+      const sortedDepts = sortDepartments(depts);
+      setDepartments(sortedDepts);
+    } catch (error: any) {
+      console.error('获取部门列表失败:', error);
+    }
+  };
+
+  // 递归排序部门，确保树形结构的顺序
+  const sortDepartments = (depts: Department[]) => {
+    const result: Department[] = [];
+    
+    // 找出所有根部门（一级部门）
+    const roots = depts.filter(d => !d.parent_id).sort((a, b) => a.sort_order - b.sort_order);
+    
+    // 递归添加部门及其子部门
+    const addDeptWithChildren = (dept: Department) => {
+      result.push(dept);
+      // 找出当前部门的所有子部门
+      const children = depts
+        .filter(d => d.parent_id === dept.id)
+        .sort((a, b) => a.sort_order - b.sort_order);
+      children.forEach(child => addDeptWithChildren(child));
+    };
+    
+    // 从根部门开始递归添加
+    roots.forEach(root => addDeptWithChildren(root));
+    
+    return result;
   };
 
   // 打开新增/编辑对话框
@@ -275,14 +315,32 @@ const Users = () => {
           </Space>
         }
         extra={
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => handleOpenModal()}>
-            添加用户
-          </Button>
+          <Space>
+            <Select
+              placeholder="按部门筛选"
+              allowClear
+              style={{ width: 200 }}
+              value={selectedDepartment}
+              onChange={setSelectedDepartment}
+            >
+              {departments.map(dept => {
+                const indent = dept.level === 1 ? '' : dept.level === 2 ? '├─ ' : '│  └─ ';
+                return (
+                  <Select.Option key={dept.id} value={dept.id}>
+                    {indent}{dept.name}
+                  </Select.Option>
+                );
+              })}
+            </Select>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => handleOpenModal()}>
+              添加用户
+            </Button>
+          </Space>
         }
       >
         <Table
           columns={columns}
-          dataSource={users}
+          dataSource={selectedDepartment ? users.filter(u => u.department_id === selectedDepartment) : users}
           rowKey="id"
           loading={loading}
           pagination={{
@@ -316,8 +374,8 @@ const Users = () => {
             <Input placeholder="请输入学号（可选）" />
           </Form.Item>
 
-          <Form.Item label="职位/班级" name="position">
-            <Input placeholder="例如：计算机科学与技术2021级1班" />
+          <Form.Item label="职位" name="position">
+            <Input placeholder="例如：班长、学习委员、普通学生等" />
           </Form.Item>
 
           <Form.Item label="邮箱" name="email">
@@ -326,6 +384,24 @@ const Users = () => {
 
           <Form.Item label="手机号" name="phone">
             <Input placeholder="请输入手机号" />
+          </Form.Item>
+
+          <Form.Item label="所属部门" name="department_id">
+            <Select
+              placeholder="请选择部门（可选）"
+              allowClear
+              showSearch
+              optionFilterProp="children"
+            >
+              {departments.map(dept => {
+                const indent = dept.level === 1 ? '' : dept.level === 2 ? '├─ ' : '│  └─ ';
+                return (
+                  <Select.Option key={dept.id} value={dept.id}>
+                    {indent}{dept.name}
+                  </Select.Option>
+                );
+              })}
+            </Select>
           </Form.Item>
 
           {!editingUser && (

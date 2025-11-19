@@ -161,12 +161,13 @@ class AttendanceService:
         """获取日期范围内的考勤记录"""
         return self.attendance_repo.get_by_date_range(start_date, end_date, user_id)
     
-    def get_daily_statistics(self, date: Optional[datetime] = None) -> Dict:
+    def get_daily_statistics(self, date: Optional[datetime] = None, department_id: Optional[int] = None) -> Dict:
         """
         获取每日统计
         
         Args:
             date: 日期(默认今天)
+            department_id: 部门ID（可选，包含子部门）
             
         Returns:
             统计数据
@@ -177,10 +178,30 @@ class AttendanceService:
         start_date = date.replace(hour=0, minute=0, second=0, microsecond=0)
         end_date = start_date + timedelta(days=1)
         
-        stats = self.attendance_repo.get_statistics(start_date, end_date)
+        stats = self.attendance_repo.get_statistics(start_date, end_date, department_id)
         
         # 添加额外信息
-        total_users = self.user_repo.count(active_only=True)
+        if department_id:
+            # 统计指定部门及其子部门的用户数
+            from database.models_v3 import Department
+            dept = Department.query.get(department_id)
+            if dept:
+                dept_ids = [dept.id]
+                def get_child_ids(parent_id):
+                    children = Department.query.filter_by(parent_id=parent_id).all()
+                    for child in children:
+                        dept_ids.append(child.id)
+                        get_child_ids(child.id)
+                get_child_ids(dept.id)
+                
+                # 统计这些部门的用户数
+                from database.models import User
+                total_users = User.query.filter(User.department_id.in_(dept_ids), User.is_active == True).count()
+            else:
+                total_users = 0
+        else:
+            total_users = self.user_repo.count(active_only=True)
+        
         stats['total_users'] = total_users
         stats['attendance_rate'] = (stats['unique_users'] / total_users * 100) if total_users > 0 else 0
         stats['date'] = start_date.strftime('%Y-%m-%d')
