@@ -15,6 +15,16 @@ from config.settings import Config
 from database.models import db
 from models.model_manager import model_manager
 from api.middleware import handle_errors, log_requests
+from services.scheduler_service import init_scheduler
+
+
+def init_scheduler_service(app):
+    """初始化定时任务服务"""
+    try:
+        init_scheduler(app)
+        app.logger.info("定时任务服务初始化成功")
+    except Exception as e:
+        app.logger.error(f"定时任务服务初始化失败: {e}")
 
 
 def create_app():
@@ -49,6 +59,9 @@ def create_app():
         except Exception as e:
             app.logger.warning(f"模型加载失败: {e}")
     
+    # 初始化定时任务
+    init_scheduler_service(app)
+    
     return app
 
 
@@ -72,6 +85,7 @@ def register_blueprints(app):
     from api.routes.user_auth import user_auth_bp
     from api.routes.department import department_bp
     from api.routes.attendance_rule import attendance_rule_bp
+    from api.routes.scheduler import scheduler_bp
     
     # 原有路由
     app.register_blueprint(user_bp, url_prefix='/api/users')
@@ -89,6 +103,9 @@ def register_blueprints(app):
     
     # V3.0 新增：考勤规则路由
     app.register_blueprint(attendance_rule_bp, url_prefix='/api/attendance-rules')
+    
+    # V3.0 新增：定时任务路由
+    app.register_blueprint(scheduler_bp, url_prefix='/api/scheduler')
     
     app.logger.info("路由注册完成")
 
