@@ -48,6 +48,8 @@ export interface AttendanceRule {
   is_active: boolean;
   is_open_mode: boolean;
   description?: string;
+  checkin_before_minutes: number;
+  enable_once_per_day: boolean;
   created_at: string;
 }
 

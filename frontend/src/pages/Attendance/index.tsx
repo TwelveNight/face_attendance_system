@@ -355,12 +355,23 @@ const Attendance = () => {
                       {previewResult.rule && (
                         <>
                           <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.3)' }}>
-                            <div style={{ fontSize: 13 }}>
+                            <div style={{ fontSize: 13, marginBottom: 4 }}>
                               规则: {previewResult.rule.name}
                             </div>
                             {!previewResult.rule.is_open_mode && (
                               <div style={{ fontSize: 13 }}>
                                 时间: {previewResult.rule.work_start_time.substring(0, 5)} - {previewResult.rule.work_end_time.substring(0, 5)}
+                              </div>
+                            )}
+                            {previewResult.rule.checkin_before_minutes > 0 && (
+                              <div style={{ fontSize: 12, opacity: 0.9, marginTop: 4 }}>
+                                最早打卡: {(() => {
+                                  const [h, m] = previewResult.rule.work_start_time.split(':');
+                                  const totalMinutes = parseInt(h) * 60 + parseInt(m) - previewResult.rule.checkin_before_minutes;
+                                  const earliestH = Math.floor(totalMinutes / 60);
+                                  const earliestM = totalMinutes % 60;
+                                  return `${earliestH.toString().padStart(2, '0')}:${earliestM.toString().padStart(2, '0')}`;
+                                })()}
                               </div>
                             )}
                           </div>
@@ -372,6 +383,11 @@ const Attendance = () => {
                               fontSize: 15,
                               fontWeight: 'bold'
                             }}>
+                              {previewResult.status_preview.check_type_name && (
+                                <div style={{ fontSize: 13, marginBottom: 4, opacity: 0.9 }}>
+                                  打卡类型: {previewResult.status_preview.check_type_name}打卡
+                                </div>
+                              )}
                               {previewResult.status_preview.is_late ? (
                                 <>⚠️ 预计状态: 迟到 {previewResult.status_preview.minutes} 分钟</>
                               ) : previewResult.status_preview.is_early ? (

@@ -120,6 +120,8 @@ const AttendanceRules = () => {
         is_open_mode: rule.is_open_mode,
         is_active: rule.is_active,
         description: rule.description,
+        checkin_before_minutes: rule.checkin_before_minutes,
+        enable_once_per_day: rule.enable_once_per_day,
       });
     } else {
       setEditingRule(null);
@@ -134,6 +136,8 @@ const AttendanceRules = () => {
         is_default: false,
         is_open_mode: false,
         is_active: true,
+        checkin_before_minutes: 0,
+        enable_once_per_day: true,
       });
     }
     setIsModalOpen(true);
@@ -155,6 +159,8 @@ const AttendanceRules = () => {
         is_open_mode: values.is_open_mode || false,
         is_active: values.is_active !== false,
         description: values.description,
+        checkin_before_minutes: values.checkin_before_minutes || 0,
+        enable_once_per_day: values.enable_once_per_day !== false,
       };
 
       if (editingRule) {
@@ -411,9 +417,43 @@ const AttendanceRules = () => {
             </Form.Item>
           </Space>
 
-          <div style={{ color: '#999', fontSize: 12, marginTop: -10 }}>
+          <div style={{ color: '#999', fontSize: 12, marginTop: -10, marginBottom: 16 }}>
             <p>• 默认规则：未设置专属规则的部门将使用此规则</p>
             <p>• 开放模式：任何时间打卡都视为正常，不判断迟到早退</p>
+          </div>
+
+          <div style={{ 
+            background: '#f5f5f5', 
+            padding: 16, 
+            borderRadius: 8,
+            marginTop: 16 
+          }}>
+            <div style={{ fontWeight: 'bold', marginBottom: 12, color: '#1890ff' }}>
+              ⏰ 打卡时间限制（可选）
+            </div>
+
+            <Space direction="vertical" style={{ width: '100%' }} size="middle">
+              <Form.Item label="每天只能打卡一次" name="enable_once_per_day" valuePropName="checked">
+                <Switch />
+              </Form.Item>
+
+              <Form.Item 
+                label="上班可提前打卡（分钟）" 
+                name="checkin_before_minutes"
+                tooltip="设置为0表示不限制最早打卡时间"
+              >
+                <InputNumber min={0} max={180} placeholder="0" style={{ width: 200 }} />
+              </Form.Item>
+            </Space>
+
+            <div style={{ color: '#999', fontSize: 12, marginTop: 8 }}>
+              <p>• 每天只能打卡一次：启用后，上班打卡一次、下班打卡一次（共两次）</p>
+              <p>• 上班可提前打卡：限制用户最早可以在上班时间前多久打卡</p>
+              <p>  - 设置为0：不限制最早打卡时间</p>
+              <p>  - 设置为30：上班9:00，最早8:30可以打卡</p>
+              <p>• 迟到/早退判断：由"迟到阈值"和"早退阈值"控制</p>
+              <p>• 打卡类型自动判断：根据上下班时间中点自动区分上班/下班打卡</p>
+            </div>
           </div>
         </Form>
       </Modal>

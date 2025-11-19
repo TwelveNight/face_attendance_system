@@ -125,7 +125,9 @@ class AttendanceRuleService:
                    late_threshold: int = 0, early_threshold: int = 0,
                    work_days: str = '1,2,3,4,5', department_id: Optional[int] = None,
                    is_default: bool = False, is_open_mode: bool = False,
-                   description: str = None) -> AttendanceRule:
+                   description: str = None,
+                   checkin_before_minutes: int = 0,
+                   enable_once_per_day: bool = True) -> AttendanceRule:
         """
         创建考勤规则
         
@@ -140,6 +142,8 @@ class AttendanceRuleService:
             is_default: 是否为默认规则
             is_open_mode: 是否为开放模式
             description: 描述
+            checkin_before_minutes: 上班打卡可提前多少分钟(0表示不限制)
+            enable_once_per_day: 是否限制每天只能打卡一次
             
         Returns:
             创建的规则对象
@@ -159,7 +163,9 @@ class AttendanceRuleService:
             is_default=is_default,
             is_open_mode=is_open_mode,
             description=description,
-            is_active=True
+            is_active=True,
+            checkin_before_minutes=checkin_before_minutes,
+            enable_once_per_day=enable_once_per_day
         )
         
         db.session.add(rule)
@@ -219,19 +225,52 @@ class AttendanceRuleService:
         return True
     
     @staticmethod
+    def determine_checkin_type(rule: AttendanceRule, check_time: datetime) -> str:
+        """
+        根据当前时间自动判断是上班打卡还是下班打卡
+        
+        Args:
+            rule: 考勤规则
+            check_time: 打卡时间
+            
+        Returns:
+            'checkin' 或 'checkout'
+        """
+        check_time_only = check_time.time()
+        work_start = rule.work_start_time
+        work_end = rule.work_end_time
+        
+        # 计算上下班时间的中点
+        start_minutes = work_start.hour * 60 + work_start.minute
+        end_minutes = work_end.hour * 60 + work_end.minute
+        check_minutes = check_time_only.hour * 60 + check_time_only.minute
+        
+        # 如果在中点之前，判断为上班打卡；否则为下班打卡
+        midpoint = (start_minutes + end_minutes) / 2
+        
+        if check_minutes < midpoint:
+            return 'checkin'
+        else:
+            return 'checkout'
+    
+    @staticmethod
     def check_attendance_status(rule: AttendanceRule, check_time: datetime, 
-                               check_type: str = 'checkin') -> Dict:
+                               check_type: str = None) -> Dict:
         """
         根据规则检查考勤状态
         
         Args:
             rule: 考勤规则
             check_time: 打卡时间
-            check_type: 打卡类型（checkin/checkout）
+            check_type: 打卡类型（checkin/checkout），None表示自动判断
             
         Returns:
             状态信息字典 {'status': 'present/late/early', 'is_late': bool, 'is_early': bool, 'minutes': int}
         """
+        # 如果未指定打卡类型，自动判断
+        if check_type is None:
+            check_type = AttendanceRuleService.determine_checkin_type(rule, check_time)
+        
         # 开放模式：任何时间打卡都是正常
         if rule.is_open_mode:
             return {
@@ -366,6 +405,70 @@ class AttendanceRuleService:
             })
         
         return conflicts
+    
+    @staticmethod
+    def check_checkin_window(rule: AttendanceRule, user_id: int, check_time: datetime) -> Dict:
+        """
+        检查打卡时间限制和次数限制
+        
+        Args:
+            rule: 考勤规则
+            user_id: 用户ID
+            check_time: 打卡时间
+            
+        Returns:
+            检查结果 {'allowed': bool, 'message': str, 'reason': str}
+        """
+        from database.models import Attendance
+        
+        # 开放模式不限制
+        if rule.is_open_mode:
+            return {'allowed': True, 'message': '开放模式，可以打卡'}
+        
+        check_time_only = check_time.time()
+        check_date = check_time.date()
+        
+        # 检查每天打卡次数限制
+        if rule.enable_once_per_day:
+            # 判断当前打卡类型
+            check_type = AttendanceRuleService.determine_checkin_type(rule, check_time)
+            
+            # 查询今天同类型的打卡记录（直接使用数据库中的check_type字段）
+            existing_record = Attendance.query.filter(
+                Attendance.user_id == user_id,
+                db.func.date(Attendance.timestamp) == check_date,
+                Attendance.check_type == check_type
+            ).first()
+            
+            if existing_record:
+                type_name = '上班' if check_type == 'checkin' else '下班'
+                return {
+                    'allowed': False,
+                    'message': f'今天已经{type_name}打过卡了（{existing_record.timestamp.strftime("%H:%M:%S")}），每天只能{type_name}打卡一次',
+                    'reason': f'already_{check_type}_today'
+                }
+        
+        # 检查打卡时间限制（只限制最早打卡时间）
+        # checkin_before_minutes > 0 表示启用限制
+        if rule.checkin_before_minutes > 0:
+            work_start = rule.work_start_time
+            
+            # 计算允许的打卡时间范围
+            start_minutes = work_start.hour * 60 + work_start.minute
+            check_minutes = check_time_only.hour * 60 + check_time_only.minute
+            
+            # 最早可打卡时间
+            earliest_minutes = start_minutes - rule.checkin_before_minutes
+            
+            if check_minutes < earliest_minutes:
+                earliest_time = f"{earliest_minutes // 60:02d}:{earliest_minutes % 60:02d}"
+                return {
+                    'allowed': False,
+                    'message': f'打卡时间过早，最早可在 {earliest_time} 打卡',
+                    'reason': 'too_early'
+                }
+        
+        return {'allowed': True, 'message': '可以打卡'}
     
     @staticmethod
     def _time_diff_minutes(time1: time, time2: time) -> int:

@@ -153,6 +153,11 @@ class AttendanceRule(db.Model):
     is_active = db.Column(db.Boolean, default=True)
     is_open_mode = db.Column(db.Boolean, default=False, index=True)
     description = db.Column(db.Text)
+    
+    # 打卡时间限制
+    checkin_before_minutes = db.Column(db.Integer, default=0)  # 上班打卡可提前多少分钟(0表示不限制)
+    enable_once_per_day = db.Column(db.Boolean, default=True)  # 是否限制每天只能打卡一次
+    
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, onupdate=datetime.utcnow)
     
@@ -176,6 +181,8 @@ class AttendanceRule(db.Model):
             'is_active': self.is_active,
             'is_open_mode': self.is_open_mode,
             'description': self.description,
+            'checkin_before_minutes': self.checkin_before_minutes,
+            'enable_once_per_day': self.enable_once_per_day,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
     

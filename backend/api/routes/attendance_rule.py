@@ -121,7 +121,9 @@ def create_rule(current_admin=None):
             department_id=data.get('department_id'),
             is_default=data.get('is_default', False),
             is_open_mode=data.get('is_open_mode', False),
-            description=data.get('description')
+            description=data.get('description'),
+            checkin_before_minutes=data.get('checkin_before_minutes', 0),
+            enable_once_per_day=data.get('enable_once_per_day', True)
         )
         
         return success_response(rule.to_dict(), "创建成功")

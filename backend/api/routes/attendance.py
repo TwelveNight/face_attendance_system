@@ -76,17 +76,24 @@ def preview_recognition():
         rule_service = AttendanceRuleService()
         rule = rule_service.get_rule_for_user(user_id)
         
-        # 预测打卡状态
+        # 预测打卡状态（自动判断上班/下班）
         status_info = None
+        check_type_name = None
         if rule:
             check_time = datetime.now()
-            status_result = rule_service.check_attendance_status(rule, check_time, 'checkin')
+            # 自动判断打卡类型
+            check_type = rule_service.determine_checkin_type(rule, check_time)
+            check_type_name = '上班' if check_type == 'checkin' else '下班'
+            
+            status_result = rule_service.check_attendance_status(rule, check_time, check_type)
             status_info = {
                 'status': status_result['status'],
                 'is_late': status_result['is_late'],
                 'is_early': status_result['is_early'],
                 'minutes': status_result.get('minutes', 0),
-                'message': status_result['message']
+                'message': status_result['message'],
+                'check_type': check_type,
+                'check_type_name': check_type_name
             }
         
         # 返回识别结果
@@ -103,7 +110,8 @@ def preview_recognition():
                 'name': rule.name,
                 'work_start_time': rule.work_start_time.strftime('%H:%M:%S'),
                 'work_end_time': rule.work_end_time.strftime('%H:%M:%S'),
-                'is_open_mode': rule.is_open_mode
+                'is_open_mode': rule.is_open_mode,
+                'checkin_before_minutes': rule.checkin_before_minutes
             } if rule else None,
             'status_preview': status_info
         })

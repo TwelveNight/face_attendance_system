@@ -105,9 +105,20 @@ class AttendanceService:
             
             if rule:
                 rule_id = rule.id
-                # 默认为上班打卡
+                
+                # 检查打卡时间窗口限制
+                window_check = self.rule_service.check_checkin_window(rule, user_id, check_time)
+                if not window_check['allowed']:
+                    return {
+                        'success': False,
+                        'message': window_check['message'],
+                        'reason': window_check.get('reason')
+                    }
+                
+                # 自动判断打卡类型（上班/下班）
+                check_type = self.rule_service.determine_checkin_type(rule, check_time)
                 rule_result = self.rule_service.check_attendance_status(
-                    rule, check_time, 'checkin'
+                    rule, check_time, check_type
                 )
                 status = rule_result['status']
                 is_late = rule_result['is_late']
@@ -117,11 +128,15 @@ class AttendanceService:
                 print(f"  - 规则ID: {rule.id}")
                 print(f"  - 规则名称: {rule.name}")
                 print(f"  - 上班时间: {rule.work_start_time}")
+                print(f"  - 下班时间: {rule.work_end_time}")
+                print(f"  - 打卡类型: {'上班' if check_type == 'checkin' else '下班'}")
                 print(f"  - 迟到阈值: {rule.late_threshold}分钟")
+                print(f"  - 早退阈值: {rule.early_threshold}分钟")
                 print(f"  - 开放模式: {rule.is_open_mode}")
                 print(f"  - 打卡时间: {check_time.time()}")
                 print(f"  - 判断结果: {status}")
                 print(f"  - 是否迟到: {is_late}")
+                print(f"  - 是否早退: {is_early}")
                 print(f"  - 消息: {rule_result['message']}")
             else:
                 print(f"\n⚠️ 未找到适用规则，使用默认状态")
@@ -130,7 +145,7 @@ class AttendanceService:
             image_path = None
             # TODO: 实现图像保存逻辑
             
-            # 创建考勤记录
+            # 创建考勤记录（使用自动判断的打卡类型）
             attendance = self.attendance_repo.create(
                 user_id=user_id,
                 status=status,
@@ -139,7 +154,7 @@ class AttendanceService:
                 rule_id=rule_id,
                 is_late=is_late,
                 is_early=is_early,
-                check_type='checkin'
+                check_type=check_type  # 使用自动判断的类型
             )
             
             # 记录日志
