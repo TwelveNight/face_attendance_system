@@ -4,7 +4,7 @@
 """
 from typing import List, Dict, Optional
 from datetime import datetime, time
-from database.models_v3 import AttendanceRule, db
+from database.models import AttendanceRule, db
 
 
 class AttendanceRuleService:
@@ -66,7 +66,7 @@ class AttendanceRuleService:
         Returns:
             规则对象或None
         """
-        from database.models_v3 import Department
+        from database.models import Department
         
         # 先查找部门专属规则（按ID降序，最新创建的优先）
         rule = AttendanceRule.query.filter_by(
@@ -389,7 +389,7 @@ class AttendanceRuleService:
         ).group_by(AttendanceRule.department_id).having(func.count(AttendanceRule.id) > 1).all()
         
         for dept_id, count in dept_rule_counts:
-            from database.models_v3 import Department
+            from database.models import Department
             dept = Department.query.get(dept_id)
             dept_name = dept.name if dept else f"ID:{dept_id}"
             rules = AttendanceRule.query.filter_by(

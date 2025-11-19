@@ -176,9 +176,8 @@ def migrate_with_sqlalchemy():
     with app.app_context():
         try:
             # 导入所有模型
-            from database.models_v3 import (
-                Admin, AdminLoginLog, Department, AttendanceRule,
-                Holiday, LeaveRequest, MakeupRequest, SystemConfig
+            from database.models import (
+                Admin, AdminLoginLog, Department, AttendanceRule
             )
             
             # 创建所有表

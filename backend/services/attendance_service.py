@@ -251,7 +251,7 @@ class AttendanceService:
         # 添加额外信息
         if department_id:
             # 统计指定部门及其子部门的用户数
-            from database.models_v3 import Department
+            from database.models import Department
             dept = Department.query.get(department_id)
             if dept:
                 dept_ids = [dept.id]

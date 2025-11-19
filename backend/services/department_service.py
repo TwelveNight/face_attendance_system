@@ -1,9 +1,9 @@
 """
-部门管理服务
+部门服务
 提供部门的CRUD操作和树形结构查询
 """
 from typing import List, Dict, Optional
-from database.models_v3 import Department, db
+from database.models import Department, db
 from sqlalchemy import or_
 
 

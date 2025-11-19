@@ -5,8 +5,7 @@
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from datetime import datetime, date, timedelta
-from database.models import db, Attendance, User
-from database.models_v3 import AttendanceRule
+from database.models import db, Attendance, User, AttendanceRule
 from services.attendance_rule_service import AttendanceRuleService
 import logging
 

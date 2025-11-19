@@ -165,7 +165,7 @@ class AttendanceRepository:
                 query = query.filter_by(check_type=filters['check_type'])
             if 'department_id' in filters:
                 # 筛选指定部门及其所有子部门的用户
-                from database.models_v3 import Department
+                from database.models import Department
                 dept = Department.query.get(filters['department_id'])
                 if dept:
                     # 获取该部门及所有子部门的ID
@@ -211,7 +211,7 @@ class AttendanceRepository:
         
         # 如果指定了部门，筛选该部门及其子部门的用户
         if department_id:
-            from database.models_v3 import Department
+            from database.models import Department
             dept = Department.query.get(department_id)
             if dept:
                 # 获取该部门及所有子部门的ID

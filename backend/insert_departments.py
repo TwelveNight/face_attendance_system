@@ -7,7 +7,7 @@ from pathlib import Path
 # 添加backend到路径
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from database.models_v3 import db, Department
+from database.models import db, Department
 from api.app import create_app
 
 app = create_app()

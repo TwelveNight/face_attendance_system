@@ -3,8 +3,7 @@
 """
 from flask import Blueprint, request, jsonify
 from datetime import datetime
-from database.models import db
-from database.models_v3 import Admin, AdminLoginLog
+from database.models import db, Admin, AdminLoginLog
 from utils.auth import AuthUtils, admin_required
 from api.middleware import success_response, error_response
 
