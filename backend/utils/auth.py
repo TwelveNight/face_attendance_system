@@ -160,14 +160,18 @@ def admin_required(f):
             return f(*args, **kwargs)
             
         except ValueError as e:
+            print(f"✗ 认证失败 (ValueError): {str(e)}")
             return jsonify({
                 'success': False,
                 'message': str(e)
             }), 401
         except Exception as e:
+            print(f"✗ 认证失败 (Exception): {str(e)}")
+            import traceback
+            traceback.print_exc()
             return jsonify({
                 'success': False,
-                'message': '认证失败'
+                'message': f'认证失败: {str(e)}'
             }), 401
     
     return decorated_function

@@ -24,8 +24,13 @@ apiClient.interceptors.request.use(
     
     // 添加Token到请求头
     const token = localStorage.getItem('token');
+    const userType = localStorage.getItem('userType');
+    
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log('Token已添加到请求头, 用户类型:', userType);
+    } else {
+      console.warn('⚠️ 没有找到Token，请先登录');
     }
     
     if (config.data && config.url?.includes('register')) {

@@ -14,7 +14,8 @@ import {
   Tag,
   Card,
 } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, UserOutlined, CameraOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, UserOutlined, CameraOutlined, LockOutlined } from '@ant-design/icons';
+import { useAuthStore } from '../../store/authStore';
 import { useUserStore } from '../../store/userStore';
 import { userApi } from '../../api/client';
 import type { User } from '../../types';
@@ -27,12 +28,18 @@ const Users = () => {
   const [isFaceCaptureOpen, setIsFaceCaptureOpen] = useState(false);
   const [pendingUserData, setPendingUserData] = useState<any>(null);
   const [capturingUserId, setCapturingUserId] = useState<number | null>(null);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [passwordUserId, setPasswordUserId] = useState<number | null>(null);
   const [form] = Form.useForm();
+  const [passwordForm] = Form.useForm();
+  
+  const { userType } = useAuthStore();
 
   const { users, loading, fetchUsers, createUser, updateUser, deleteUser } = useUserStore();
 
   useEffect(() => {
     loadUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadUsers = () => {
@@ -46,6 +53,10 @@ const Users = () => {
       form.setFieldsValue({
         username: user.username,
         student_id: user.student_id,
+        department_id: user.department_id,
+        position: user.position,
+        email: user.email,
+        phone: user.phone,
       });
     } else {
       setEditingUser(null);
@@ -142,8 +153,34 @@ const Users = () => {
       await deleteUser(userId);
       message.success('用户删除成功');
       loadUsers();
-    } catch (error) {
+    } catch {
       message.error('删除失败');
+    }
+  };
+
+  // 打开设置密码对话框
+  const handleOpenPasswordModal = (userId: number) => {
+    setPasswordUserId(userId);
+    setIsPasswordModalOpen(true);
+    passwordForm.resetFields();
+  };
+
+  // 设置密码
+  const handleSetPassword = async () => {
+    try {
+      const values = await passwordForm.validateFields();
+      if (values.password !== values.confirmPassword) {
+        message.error('两次密码输入不一致');
+        return;
+      }
+      
+      // 调用后端API设置密码
+      await userApi.updateUser(passwordUserId!, { password: values.password });
+      message.success('密码设置成功');
+      setIsPasswordModalOpen(false);
+      passwordForm.resetFields();
+    } catch (error: any) {
+      message.error(error.message || '密码设置失败');
     }
   };
 
@@ -183,9 +220,17 @@ const Users = () => {
     {
       title: '操作',
       key: 'action',
-      width: 280,
+      width: 350,
       render: (_: any, record: User) => (
         <Space size="small">
+          <Button
+            type="link"
+            size="small"
+            icon={<LockOutlined />}
+            onClick={() => handleOpenPasswordModal(record.id)}
+          >
+            设置密码
+          </Button>
           <Button
             type="link"
             size="small"
@@ -202,17 +247,19 @@ const Users = () => {
           >
             编辑
           </Button>
-          <Popconfirm
-            title="确定删除该用户吗？"
-            description="删除后将无法恢复，且会删除该用户的人脸数据。"
-            onConfirm={() => handleDelete(record.id)}
-            okText="确定"
-            cancelText="取消"
-          >
-            <Button type="link" size="small" danger icon={<DeleteOutlined />}>
-              删除
-            </Button>
-          </Popconfirm>
+          {userType === 'admin' && (
+            <Popconfirm
+              title="确定删除该用户吗？"
+              description="删除后将无法恢复，且会删除该用户的人脸数据。"
+              onConfirm={() => handleDelete(record.id)}
+              okText="确定"
+              cancelText="取消"
+            >
+              <Button type="link" size="small" danger icon={<DeleteOutlined />}>
+                删除
+              </Button>
+            </Popconfirm>
+          )}
         </Space>
       ),
     },
@@ -254,6 +301,7 @@ const Users = () => {
         onCancel={handleCloseModal}
         okText="确定"
         cancelText="取消"
+        width={600}
       >
         <Form form={form} layout="vertical" style={{ marginTop: 24 }}>
           <Form.Item
@@ -268,11 +316,61 @@ const Users = () => {
             <Input placeholder="请输入学号（可选）" />
           </Form.Item>
 
+          <Form.Item label="职位/班级" name="position">
+            <Input placeholder="例如：计算机科学与技术2021级1班" />
+          </Form.Item>
+
+          <Form.Item label="邮箱" name="email">
+            <Input placeholder="请输入邮箱" type="email" />
+          </Form.Item>
+
+          <Form.Item label="手机号" name="phone">
+            <Input placeholder="请输入手机号" />
+          </Form.Item>
+
           {!editingUser && (
             <div style={{ color: '#999', fontSize: 12, marginTop: -16, marginBottom: 16 }}>
               提示：点击确定后将打开摄像头进行人脸采集
             </div>
           )}
+        </Form>
+      </Modal>
+
+      {/* 设置密码对话框 */}
+      <Modal
+        title="设置用户密码"
+        open={isPasswordModalOpen}
+        onOk={handleSetPassword}
+        onCancel={() => {
+          setIsPasswordModalOpen(false);
+          passwordForm.resetFields();
+        }}
+        okText="确定"
+        cancelText="取消"
+      >
+        <Form form={passwordForm} layout="vertical" style={{ marginTop: 24 }}>
+          <Form.Item
+            label="新密码"
+            name="password"
+            rules={[
+              { required: true, message: '请输入新密码' },
+              { min: 6, message: '密码至少6位' }
+            ]}
+          >
+            <Input.Password placeholder="请输入新密码（至少6位）" />
+          </Form.Item>
+
+          <Form.Item
+            label="确认密码"
+            name="confirmPassword"
+            rules={[{ required: true, message: '请确认密码' }]}
+          >
+            <Input.Password placeholder="请再次输入密码" />
+          </Form.Item>
+
+          <div style={{ color: '#999', fontSize: 12 }}>
+            提示：设置密码后，用户可以使用用户名/学号和密码登录系统
+          </div>
         </Form>
       </Modal>
 

@@ -8,6 +8,7 @@ import base64
 
 from services import UserService
 from api.middleware import success_response, error_response, require_json
+from utils.auth import AuthUtils, admin_required
 
 user_bp = Blueprint('user', __name__)
 user_service = UserService()
@@ -98,14 +99,22 @@ def register_user():
 
 @user_bp.route('/<int:user_id>', methods=['PUT'])
 @require_json
-def update_user(user_id):
-    """更新用户信息"""
+@admin_required
+def update_user(user_id, current_admin=None):
+    """更新用户信息（需要管理员权限）"""
     try:
         data = request.get_json()
         
         # 移除不允许更新的字段
         data.pop('id', None)
         data.pop('created_at', None)
+        
+        # 处理密码设置
+        if 'password' in data:
+            password = data.pop('password')
+            if password:
+                # 使用bcrypt加密密码
+                data['password_hash'] = AuthUtils.hash_password(password)
         
         user = user_service.update_user(user_id, **data)
         
@@ -156,8 +165,9 @@ def update_user_faces(user_id):
 
 
 @user_bp.route('/<int:user_id>', methods=['DELETE'])
-def delete_user(user_id):
-    """删除用户（默认硬删除）"""
+@admin_required
+def delete_user(user_id, current_admin=None):
+    """删除用户（需要管理员权限，默认硬删除）"""
     try:
         # 默认硬删除（物理删除），除非明确指定 hard=false
         hard_delete = request.args.get('hard', 'true').lower() == 'true'

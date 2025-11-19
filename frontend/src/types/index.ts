@@ -7,9 +7,15 @@ export interface User {
   id: number;
   username: string;
   student_id?: string;
+  department_id?: number;
+  position?: string;
+  email?: string;
+  phone?: string;
+  entry_date?: string;
   created_at: string;
   avatar_path?: string;
   is_active: boolean;
+  password?: string; // 仅用于更新密码
 }
 
 // 考勤记录类型
