@@ -189,6 +189,24 @@ def delete_rule(rule_id, current_admin=None):
         return error_response("删除失败", 500, str(e))
 
 
+@attendance_rule_bp.route('/conflicts', methods=['GET'])
+@admin_required
+def check_conflicts(current_admin=None):
+    """
+    检查规则冲突（需要管理员权限）
+    """
+    try:
+        conflicts = rule_service.check_rule_conflicts()
+        
+        return success_response({
+            'has_conflicts': len(conflicts) > 0,
+            'conflicts': conflicts
+        })
+    
+    except Exception as e:
+        return error_response("检查冲突失败", 500, str(e))
+
+
 @attendance_rule_bp.route('/check', methods=['POST'])
 @require_json
 def check_status():

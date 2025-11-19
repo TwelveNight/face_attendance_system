@@ -53,7 +53,12 @@ class AttendanceRuleService:
     def get_rule_by_department(department_id: int) -> Optional[AttendanceRule]:
         """
         获取部门的考勤规则
-        如果部门没有专属规则，返回默认规则
+        如果部门没有专属规则，向上查找父部门规则，最后返回默认规则
+        
+        优先级：
+        1. 部门专属规则（按ID降序，最新的优先）
+        2. 父部门规则（逐级向上查找）
+        3. 默认规则
         
         Args:
             department_id: 部门ID
@@ -61,13 +66,30 @@ class AttendanceRuleService:
         Returns:
             规则对象或None
         """
-        # 先查找部门专属规则
+        from database.models_v3 import Department
+        
+        # 先查找部门专属规则（按ID降序，最新创建的优先）
         rule = AttendanceRule.query.filter_by(
             department_id=department_id,
             is_active=True
-        ).first()
+        ).order_by(AttendanceRule.id.desc()).first()
         
-        # 如果没有专属规则，返回默认规则
+        # 如果没有专属规则，向上查找父部门规则
+        if not rule:
+            dept = Department.query.get(department_id)
+            while dept and dept.parent_id:
+                parent_rule = AttendanceRule.query.filter_by(
+                    department_id=dept.parent_id,
+                    is_active=True
+                ).order_by(AttendanceRule.id.desc()).first()
+                
+                if parent_rule:
+                    return parent_rule
+                
+                # 继续向上查找
+                dept = Department.query.get(dept.parent_id)
+        
+        # 如果还是没有，返回默认规则
         if not rule:
             rule = AttendanceRuleService.get_default_rule()
         
@@ -296,6 +318,54 @@ class AttendanceRuleService:
             'minutes': 0,
             'message': '打卡成功'
         }
+    
+    @staticmethod
+    def check_rule_conflicts() -> List[Dict]:
+        """
+        检查规则冲突
+        
+        Returns:
+            冲突列表，每项包含 {type, message, rules}
+        """
+        conflicts = []
+        
+        # 检查1：多个默认规则
+        default_rules = AttendanceRule.query.filter_by(is_default=True, is_active=True).all()
+        if len(default_rules) > 1:
+            conflicts.append({
+                'type': 'multiple_defaults',
+                'severity': 'error',
+                'message': f'存在{len(default_rules)}个启用的默认规则，只应有一个',
+                'rules': [r.id for r in default_rules]
+            })
+        
+        # 检查2：同一部门的多个规则
+        from sqlalchemy import func
+        dept_rule_counts = db.session.query(
+            AttendanceRule.department_id,
+            func.count(AttendanceRule.id).label('count')
+        ).filter(
+            AttendanceRule.department_id.isnot(None),
+            AttendanceRule.is_active == True
+        ).group_by(AttendanceRule.department_id).having(func.count(AttendanceRule.id) > 1).all()
+        
+        for dept_id, count in dept_rule_counts:
+            from database.models_v3 import Department
+            dept = Department.query.get(dept_id)
+            dept_name = dept.name if dept else f"ID:{dept_id}"
+            rules = AttendanceRule.query.filter_by(
+                department_id=dept_id,
+                is_active=True
+            ).all()
+            conflicts.append({
+                'type': 'department_overlap',
+                'severity': 'warning',
+                'message': f'部门"{dept_name}"有{count}个启用的规则，将使用最新的规则',
+                'rules': [r.id for r in rules],
+                'department': dept_name
+            })
+        
+        return conflicts
     
     @staticmethod
     def _time_diff_minutes(time1: time, time2: time) -> int:

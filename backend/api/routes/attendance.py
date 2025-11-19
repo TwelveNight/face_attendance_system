@@ -60,6 +60,9 @@ def preview_recognition():
         
         # 获取用户信息
         from database.repositories import UserRepository
+        from services.attendance_rule_service import AttendanceRuleService
+        from datetime import datetime
+        
         user = UserRepository.get_by_id(user_id)
         
         if not user:
@@ -69,6 +72,23 @@ def preview_recognition():
                 'message': '用户不存在'
             })
         
+        # 获取用户的考勤规则
+        rule_service = AttendanceRuleService()
+        rule = rule_service.get_rule_for_user(user_id)
+        
+        # 预测打卡状态
+        status_info = None
+        if rule:
+            check_time = datetime.now()
+            status_result = rule_service.check_attendance_status(rule, check_time, 'checkin')
+            status_info = {
+                'status': status_result['status'],
+                'is_late': status_result['is_late'],
+                'is_early': status_result['is_early'],
+                'minutes': status_result.get('minutes', 0),
+                'message': status_result['message']
+            }
+        
         # 返回识别结果
         return success_response({
             'detected': True,
@@ -77,7 +97,15 @@ def preview_recognition():
             'username': user.username,
             'student_id': user.student_id,
             'confidence': confidence,
-            'message': f'识别到: {user.username}'
+            'message': f'识别到: {user.username}',
+            'rule': {
+                'id': rule.id,
+                'name': rule.name,
+                'work_start_time': rule.work_start_time.strftime('%H:%M:%S'),
+                'work_end_time': rule.work_end_time.strftime('%H:%M:%S'),
+                'is_open_mode': rule.is_open_mode
+            } if rule else None,
+            'status_preview': status_info
         })
     
     except Exception as e:
@@ -130,7 +158,12 @@ def check_in():
             'username': result['username'],
             'student_id': result.get('student_id'),
             'confidence': result['confidence'],
-            'timestamp': result['attendance'].timestamp.isoformat()
+            'timestamp': result['attendance'].timestamp.isoformat(),
+            'status': result.get('status'),
+            'is_late': result.get('is_late', False),
+            'is_early': result.get('is_early', False),
+            'message': result['message'],
+            'rule': result.get('rule')
         }
         
         return success_response(response_data, result['message'])

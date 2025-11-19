@@ -63,10 +63,43 @@ const AttendanceRules = () => {
     }
   };
 
+  // 排序部门列表（树形结构）
+  const sortDepartments = (depts: Department[]): Department[] => {
+    // 构建父子关系映射
+    const childrenMap = new Map<number, Department[]>();
+    const rootDepts: Department[] = [];
+
+    depts.forEach(dept => {
+      if (dept.parent_id === null || dept.parent_id === undefined) {
+        rootDepts.push(dept);
+      } else {
+        if (!childrenMap.has(dept.parent_id)) {
+          childrenMap.set(dept.parent_id, []);
+        }
+        childrenMap.get(dept.parent_id)!.push(dept);
+      }
+    });
+
+    // 递归排序
+    const sortedList: Department[] = [];
+    const addDeptAndChildren = (dept: Department, level: number) => {
+      sortedList.push({ ...dept, level });
+      const children = childrenMap.get(dept.id) || [];
+      children.sort((a, b) => a.sort_order - b.sort_order);
+      children.forEach(child => addDeptAndChildren(child, level + 1));
+    };
+
+    rootDepts.sort((a, b) => a.sort_order - b.sort_order);
+    rootDepts.forEach(dept => addDeptAndChildren(dept, 0));
+
+    return sortedList;
+  };
+
   const loadDepartments = async () => {
     try {
       const response = await departmentApi.getAll(false);
-      setDepartments(response.data || []);
+      const sorted = sortDepartments(response.data || []);
+      setDepartments(sorted);
     } catch (error: any) {
       console.error('获取部门列表失败:', error);
     }
@@ -348,11 +381,15 @@ const AttendanceRules = () => {
               showSearch
               optionFilterProp="children"
             >
-              {departments.map(dept => (
-                <Select.Option key={dept.id} value={dept.id}>
-                  {dept.name}
-                </Select.Option>
-              ))}
+              {departments.map(dept => {
+                const indent = '　'.repeat(dept.level);
+                const prefix = dept.level > 0 ? '├─ ' : '';
+                return (
+                  <Select.Option key={dept.id} value={dept.id}>
+                    {indent}{prefix}{dept.name}
+                  </Select.Option>
+                );
+              })}
             </Select>
           </Form.Item>
 

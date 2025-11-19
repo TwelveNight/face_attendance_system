@@ -2,22 +2,40 @@
  * 考勤打卡页面
  */
 import { useState, useRef, useEffect } from 'react';
-import { Card, Button, Space, Alert, message, Spin, Result, Upload } from 'antd';
-import { CameraOutlined, CheckCircleOutlined, UploadOutlined } from '@ant-design/icons';
+import { Card, Button, Space, Alert, message, Spin, Result, Upload, Tag } from 'antd';
+import { CameraOutlined, CheckCircleOutlined, UploadOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import { useAttendanceStore } from '../../store/attendanceStore';
-import { attendanceApi } from '../../api/client';
+import { attendanceApi, attendanceRuleApi } from '../../api/client';
+import { useAuthStore } from '../../store/authStore';
 
 const Attendance = () => {
   const [loading, setLoading] = useState(false);
   const [capturing, setCapturing] = useState(false);
   const [checkInResult, setCheckInResult] = useState<any>(null);
   const [previewResult, setPreviewResult] = useState<any>(null); // 实时识别结果
+  const [currentRule, setCurrentRule] = useState<any>(null); // 当前生效的规则
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const previewIntervalRef = useRef<number | null>(null); // 预览定时器
 
   const { checkIn } = useAttendanceStore();
+  const { currentUser } = useAuthStore();
+
+  // 加载当前用户的考勤规则
+  useEffect(() => {
+    const loadCurrentRule = async () => {
+      if (currentUser?.id) {
+        try {
+          const response = await attendanceRuleApi.getByUser(currentUser.id);
+          setCurrentRule(response.data);
+        } catch (error) {
+          console.error('获取考勤规则失败:', error);
+        }
+      }
+    };
+    loadCurrentRule();
+  }, [currentUser]);
 
   // 启动摄像头
   const startCamera = async () => {
@@ -224,8 +242,43 @@ const Attendance = () => {
         description='请确保面部清晰可见，光线充足。可以点击"开启摄像头"使用摄像头打卡，或者点击"上传图片"使用本地图片测试打卡。'
         type="info"
         showIcon
-        style={{ marginBottom: 24 }}
+        style={{ marginBottom: 16 }}
       />
+
+      {/* 当前规则提示 */}
+      {currentRule && (
+        <Alert
+          message={
+            <Space>
+              <ClockCircleOutlined />
+              <span>当前考勤规则：{currentRule.name}</span>
+              {currentRule.is_open_mode && <Tag color="green">开放模式</Tag>}
+            </Space>
+          }
+          description={
+            <div>
+              <p>
+                <strong>规定时间：</strong>
+                {currentRule.work_start_time?.substring(0, 5)} - {currentRule.work_end_time?.substring(0, 5)}
+              </p>
+              {!currentRule.is_open_mode && (
+                <p>
+                  <strong>容忍时间：</strong>
+                  迟到 {currentRule.late_threshold} 分钟 / 早退 {currentRule.early_threshold} 分钟
+                </p>
+              )}
+              {currentRule.is_open_mode && (
+                <p style={{ color: '#52c41a' }}>
+                  <strong>提示：</strong>开放打卡模式，任何时间打卡都算正常
+                </p>
+              )}
+            </div>
+          }
+          type="success"
+          showIcon
+          style={{ marginBottom: 24 }}
+        />
+      )}
 
       <Card>
         {!checkInResult ? (
@@ -278,30 +331,67 @@ const Attendance = () => {
                     right: 10,
                     padding: '12px 16px',
                     background: previewResult.recognized 
-                      ? 'rgba(82, 196, 26, 0.9)' 
+                      ? (previewResult.status_preview?.is_late 
+                          ? 'rgba(250, 173, 20, 0.95)' 
+                          : 'rgba(82, 196, 26, 0.95)')
                       : previewResult.detected 
                       ? 'rgba(250, 173, 20, 0.9)' 
                       : 'rgba(255, 77, 79, 0.9)',
                     color: '#fff',
                     borderRadius: 8,
-                    fontSize: 16,
-                    fontWeight: 'bold',
-                    textAlign: 'center',
+                    fontSize: 14,
+                    textAlign: 'left',
                     zIndex: 10,
                   }}
                 >
                   {previewResult.recognized ? (
                     <>
-                      ✓ {previewResult.username} ({previewResult.student_id})
-                      <br />
-                      <span style={{ fontSize: 14 }}>
+                      <div style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 8 }}>
+                        ✓ {previewResult.username} ({previewResult.student_id})
+                      </div>
+                      <div style={{ fontSize: 13, opacity: 0.95 }}>
                         置信度: {(previewResult.confidence * 100).toFixed(1)}%
-                      </span>
+                      </div>
+                      {previewResult.rule && (
+                        <>
+                          <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.3)' }}>
+                            <div style={{ fontSize: 13 }}>
+                              规则: {previewResult.rule.name}
+                            </div>
+                            {!previewResult.rule.is_open_mode && (
+                              <div style={{ fontSize: 13 }}>
+                                时间: {previewResult.rule.work_start_time.substring(0, 5)} - {previewResult.rule.work_end_time.substring(0, 5)}
+                              </div>
+                            )}
+                          </div>
+                          {previewResult.status_preview && (
+                            <div style={{ 
+                              marginTop: 8, 
+                              paddingTop: 8, 
+                              borderTop: '1px solid rgba(255,255,255,0.3)',
+                              fontSize: 15,
+                              fontWeight: 'bold'
+                            }}>
+                              {previewResult.status_preview.is_late ? (
+                                <>⚠️ 预计状态: 迟到 {previewResult.status_preview.minutes} 分钟</>
+                              ) : previewResult.status_preview.is_early ? (
+                                <>⚠️ 预计状态: 早退 {previewResult.status_preview.minutes} 分钟</>
+                              ) : (
+                                <>✓ 预计状态: 正常打卡</>
+                              )}
+                            </div>
+                          )}
+                        </>
+                      )}
                     </>
                   ) : previewResult.detected ? (
-                    <>⚠️ {previewResult.message}</>
+                    <div style={{ textAlign: 'center', fontWeight: 'bold' }}>
+                      ⚠️ {previewResult.message}
+                    </div>
                   ) : (
-                    <>❌ {previewResult.message}</>
+                    <div style={{ textAlign: 'center', fontWeight: 'bold' }}>
+                      ❌ {previewResult.message}
+                    </div>
                   )}
                 </div>
               )}
@@ -358,16 +448,75 @@ const Attendance = () => {
         ) : (
           // 打卡结果显示
           <Result
-            status={checkInResult.success ? (checkInResult.is_late ? 'warning' : 'success') : 'error'}
-            title={checkInResult.success ? (checkInResult.is_late ? '打卡成功（迟到）' : '打卡成功！') : '打卡失败'}
+            status={checkInResult.success ? (checkInResult.is_late || checkInResult.is_early ? 'warning' : 'success') : 'error'}
+            title={
+              checkInResult.success ? (
+                checkInResult.is_late ? '打卡成功（迟到）' : 
+                checkInResult.is_early ? '打卡成功（早退）' : 
+                '打卡成功！'
+              ) : '打卡失败'
+            }
             subTitle={
               checkInResult.success ? (
-                <div>
-                  <p>用户：{checkInResult.username}</p>
-                  <p>学号：{checkInResult.student_id}</p>
-                  <p>识别置信度：{(checkInResult.confidence! * 100).toFixed(1)}%</p>
-                  <p>状态：{checkInResult.message}</p>
-                  <p>时间：{new Date().toLocaleString('zh-CN')}</p>
+                <div style={{ textAlign: 'left', display: 'inline-block', width: '100%', maxWidth: 500 }}>
+                  <div style={{ 
+                    background: checkInResult.is_late || checkInResult.is_early ? '#fff7e6' : '#f6ffed',
+                    border: `1px solid ${checkInResult.is_late || checkInResult.is_early ? '#ffd591' : '#b7eb8f'}`,
+                    borderRadius: 8,
+                    padding: 16,
+                    marginBottom: 16
+                  }}>
+                    <div style={{ 
+                      fontSize: 18, 
+                      fontWeight: 'bold', 
+                      color: checkInResult.is_late || checkInResult.is_early ? '#fa8c16' : '#52c41a',
+                      marginBottom: 8
+                    }}>
+                      {checkInResult.is_late ? '⚠️ 迟到' : 
+                       checkInResult.is_early ? '⚠️ 早退' : 
+                       '✓ 正常打卡'}
+                    </div>
+                    <div style={{ fontSize: 15, color: '#666' }}>
+                      {checkInResult.message}
+                    </div>
+                  </div>
+
+                  <div style={{ marginBottom: 16 }}>
+                    <p><strong>用户：</strong>{checkInResult.username}</p>
+                    <p><strong>学号：</strong>{checkInResult.student_id}</p>
+                    <p><strong>识别置信度：</strong>{(checkInResult.confidence! * 100).toFixed(1)}%</p>
+                    <p><strong>打卡时间：</strong>{new Date().toLocaleString('zh-CN')}</p>
+                  </div>
+                  
+                  {checkInResult.rule && (
+                    <div style={{ 
+                      background: '#fafafa',
+                      border: '1px solid #d9d9d9',
+                      borderRadius: 8,
+                      padding: 16,
+                      marginTop: 16
+                    }}>
+                      <div style={{ fontSize: 15, fontWeight: 'bold', marginBottom: 12, color: '#1890ff' }}>
+                        📋 应用的考勤规则
+                      </div>
+                      <p style={{ marginBottom: 8 }}>
+                        <strong>规则名称：</strong>
+                        <span style={{ color: '#1890ff' }}>{checkInResult.rule.name}</span>
+                      </p>
+                      {!checkInResult.rule.is_open_mode ? (
+                        <p style={{ marginBottom: 0 }}>
+                          <strong>规定时间：</strong>
+                          {checkInResult.rule.work_start_time.substring(0, 5)} - {checkInResult.rule.work_end_time.substring(0, 5)}
+                        </p>
+                      ) : (
+                        <p style={{ marginBottom: 0 }}>
+                          <strong>模式：</strong>
+                          <Tag color="green">开放打卡</Tag>
+                          <span style={{ color: '#52c41a' }}>任何时间都算正常</span>
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <p>{checkInResult.message}</p>

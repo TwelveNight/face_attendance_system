@@ -114,9 +114,14 @@ class AttendanceService:
                 is_early = rule_result['is_early']
                 
                 print(f"\n📋 规则检查:")
-                print(f"  - 规则: {rule.name}")
-                print(f"  - 状态: {status}")
-                print(f"  - 迟到: {is_late}")
+                print(f"  - 规则ID: {rule.id}")
+                print(f"  - 规则名称: {rule.name}")
+                print(f"  - 上班时间: {rule.work_start_time}")
+                print(f"  - 迟到阈值: {rule.late_threshold}分钟")
+                print(f"  - 开放模式: {rule.is_open_mode}")
+                print(f"  - 打卡时间: {check_time.time()}")
+                print(f"  - 判断结果: {status}")
+                print(f"  - 是否迟到: {is_late}")
                 print(f"  - 消息: {rule_result['message']}")
             else:
                 print(f"\n⚠️ 未找到适用规则，使用默认状态")
@@ -164,7 +169,14 @@ class AttendanceService:
                 'is_late': is_late,
                 'is_early': is_early,
                 'message': message,
-                'attendance': attendance
+                'attendance': attendance,
+                'rule': {
+                    'id': rule.id,
+                    'name': rule.name,
+                    'work_start_time': rule.work_start_time.strftime('%H:%M:%S'),
+                    'work_end_time': rule.work_end_time.strftime('%H:%M:%S'),
+                    'is_open_mode': rule.is_open_mode
+                } if rule else None
             }
         
         except Exception as e:

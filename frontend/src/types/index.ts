@@ -117,6 +117,13 @@ export interface CheckInResult {
   is_late?: boolean;
   is_early?: boolean;
   message: string;
+  rule?: {
+    id: number;
+    name: string;
+    work_start_time: string;
+    work_end_time: string;
+    is_open_mode: boolean;
+  };
 }
 
 // 系统状态类型
