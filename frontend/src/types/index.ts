@@ -77,6 +77,11 @@ export interface Attendance {
   student_id?: string;
   timestamp: string;
   status: 'present' | 'late' | 'absent';
+  check_type?: 'checkin' | 'checkout';  // 打卡类型：上班/下班
+  is_late?: boolean;  // 是否迟到
+  is_early?: boolean;  // 是否早退
+  rule_id?: number;  // 应用的考勤规则ID
+  rule_name?: string;  // 考勤规则名称
   confidence?: number;
   image_path?: string;
   notes?: string;

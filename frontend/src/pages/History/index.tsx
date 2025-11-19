@@ -18,6 +18,7 @@ const History = () => {
   const [pageSize, setPageSize] = useState(20);
   const [dateRange, setDateRange] = useState<[Dayjs, Dayjs] | null>(null);
   const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
+  const [checkTypeFilter, setCheckTypeFilter] = useState<string | undefined>(undefined);
   const [departmentFilter, setDepartmentFilter] = useState<number | undefined>(undefined);
   const [departments, setDepartments] = useState<Department[]>([]);
 
@@ -80,6 +81,10 @@ const History = () => {
         params.status = statusFilter;
       }
 
+      if (checkTypeFilter) {
+        params.check_type = checkTypeFilter;
+      }
+
       if (departmentFilter) {
         params.department_id = departmentFilter;
       }
@@ -104,6 +109,7 @@ const History = () => {
   const handleReset = () => {
     setDateRange(null);
     setStatusFilter(undefined);
+    setCheckTypeFilter(undefined);
     setDepartmentFilter(undefined);
     setPage(1);
     loadRecords();
@@ -153,10 +159,29 @@ const History = () => {
       render: (text: string) => text || '-',
     },
     {
+      title: '打卡日期',
+      dataIndex: 'timestamp',
+      key: 'date',
+      render: (text: string) => dayjs(text).format('YYYY-MM-DD'),
+    },
+    {
       title: '打卡时间',
       dataIndex: 'timestamp',
-      key: 'timestamp',
-      render: (text: string) => dayjs(text).format('YYYY-MM-DD HH:mm:ss'),
+      key: 'time',
+      render: (text: string) => dayjs(text).format('HH:mm:ss'),
+    },
+    {
+      title: '打卡类型',
+      dataIndex: 'check_type',
+      key: 'check_type',
+      render: (type: string) => {
+        const typeMap: Record<string, { color: string; text: string }> = {
+          checkin: { color: 'blue', text: '上班' },
+          checkout: { color: 'purple', text: '下班' },
+        };
+        const config = typeMap[type] || { color: 'default', text: '-' };
+        return <Tag color={config.color}>{config.text}</Tag>;
+      },
     },
     {
       title: '状态',
@@ -212,6 +237,17 @@ const History = () => {
               { label: '正常', value: 'present' },
               { label: '迟到', value: 'late' },
               { label: '缺勤', value: 'absent' },
+            ]}
+          />
+          <Select
+            style={{ width: 120 }}
+            placeholder="打卡类型"
+            allowClear
+            value={checkTypeFilter}
+            onChange={setCheckTypeFilter}
+            options={[
+              { label: '上班', value: 'checkin' },
+              { label: '下班', value: 'checkout' },
             ]}
           />
           <Select

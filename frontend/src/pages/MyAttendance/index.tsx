@@ -54,6 +54,8 @@ export default function MyAttendance() {
     present: attendanceList.filter(a => a.status === 'present').length,
     late: attendanceList.filter(a => a.status === 'late').length,
     absent: attendanceList.filter(a => a.status === 'absent').length,
+    checkin: attendanceList.filter(a => a.check_type === 'checkin').length,
+    checkout: attendanceList.filter(a => a.check_type === 'checkout').length,
   };
 
   const attendanceRate = statistics.total > 0 
@@ -73,6 +75,19 @@ export default function MyAttendance() {
       dataIndex: 'timestamp',
       key: 'time',
       render: (text: string) => dayjs(text).format('HH:mm:ss'),
+    },
+    {
+      title: '打卡类型',
+      dataIndex: 'check_type',
+      key: 'check_type',
+      render: (type: string) => {
+        const typeMap: Record<string, { color: string; text: string }> = {
+          checkin: { color: 'blue', text: '上班' },
+          checkout: { color: 'purple', text: '下班' },
+        };
+        const config = typeMap[type] || { color: 'default', text: '未知' };
+        return <Tag color={config.color}>{config.text}</Tag>;
+      },
     },
     {
       title: '状态',
@@ -164,10 +179,54 @@ export default function MyAttendance() {
           <Col span={6}>
             <Card>
               <Statistic
+                title="缺勤次数"
+                value={statistics.absent}
+                suffix="次"
+                valueStyle={{ color: '#ff4d4f' }}
+                prefix={<CloseCircleOutlined />}
+              />
+            </Card>
+          </Col>
+        </Row>
+
+        <Row gutter={16} style={{ marginBottom: 24 }}>
+          <Col span={6}>
+            <Card>
+              <Statistic
+                title="上班打卡"
+                value={statistics.checkin}
+                suffix="次"
+                valueStyle={{ color: '#1890ff' }}
+              />
+            </Card>
+          </Col>
+          <Col span={6}>
+            <Card>
+              <Statistic
+                title="下班打卡"
+                value={statistics.checkout}
+                suffix="次"
+                valueStyle={{ color: '#722ed1' }}
+              />
+            </Card>
+          </Col>
+          <Col span={6}>
+            <Card>
+              <Statistic
                 title="出勤率"
                 value={attendanceRate}
                 suffix="%"
-                valueStyle={{ color: '#1890ff' }}
+                valueStyle={{ color: '#52c41a' }}
+              />
+            </Card>
+          </Col>
+          <Col span={6}>
+            <Card>
+              <Statistic
+                title="本月工作日"
+                value={Math.floor(statistics.total / 2)}
+                suffix="天"
+                valueStyle={{ color: '#13c2c2' }}
               />
             </Card>
           </Col>
