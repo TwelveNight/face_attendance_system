@@ -68,12 +68,19 @@ def setup_logging(app):
 def register_blueprints(app):
     """注册蓝图"""
     from api.routes import user_bp, attendance_bp, statistics_bp, video_bp, system_bp
+    from api.routes.admin_auth import admin_auth_bp
+    from api.routes.user_auth import user_auth_bp
     
+    # 原有路由
     app.register_blueprint(user_bp, url_prefix='/api/users')
     app.register_blueprint(attendance_bp, url_prefix='/api/attendance')
     app.register_blueprint(statistics_bp, url_prefix='/api/statistics')
     app.register_blueprint(video_bp, url_prefix='/api/video')
     app.register_blueprint(system_bp, url_prefix='/api/system')
+    
+    # V3.0 新增：认证路由
+    app.register_blueprint(admin_auth_bp)  # /api/admin/*
+    app.register_blueprint(user_auth_bp)   # /api/auth/*
     
     app.logger.info("路由注册完成")
 
