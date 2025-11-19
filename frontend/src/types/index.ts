@@ -32,6 +32,25 @@ export interface Department {
   children?: Department[];
 }
 
+// 考勤规则类型
+export interface AttendanceRule {
+  id: number;
+  name: string;
+  work_start_time: string;
+  work_end_time: string;
+  late_threshold: number;
+  early_threshold: number;
+  work_days: string;
+  work_days_list: string[];
+  department_id?: number;
+  department_name?: string;
+  is_default: boolean;
+  is_active: boolean;
+  is_open_mode: boolean;
+  description?: string;
+  created_at: string;
+}
+
 // 用户类型
 export interface User {
   id: number;

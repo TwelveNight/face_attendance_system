@@ -13,6 +13,7 @@ import SetPassword from './pages/SetPassword';
 import MyAttendance from './pages/MyAttendance';
 import Profile from './pages/Profile';
 import Departments from './pages/Departments';
+import AttendanceRules from './pages/AttendanceRules';
 import { AdminRoute, UserRoute } from './components/PrivateRoute';
 import './App.css';
 
@@ -50,6 +51,7 @@ function App() {
             <Route path="dashboard" element={<AdminRoute><Dashboard /></AdminRoute>} />
             <Route path="users" element={<AdminRoute><Users /></AdminRoute>} />
             <Route path="departments" element={<AdminRoute><Departments /></AdminRoute>} />
+            <Route path="attendance-rules" element={<AdminRoute><AttendanceRules /></AdminRoute>} />
             <Route path="history" element={<AdminRoute><History /></AdminRoute>} />
             <Route path="statistics" element={<AdminRoute><Statistics /></AdminRoute>} />
           </Route>

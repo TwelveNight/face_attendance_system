@@ -351,6 +351,57 @@ export const departmentApi = {
   },
 };
 
+// ==================== 考勤规则API ====================
+
+export const attendanceRuleApi = {
+  // 获取所有规则
+  getAll: (includeInactive: boolean = false) => {
+    return apiClient.get<any, ApiResponse<any[]>>('/api/attendance-rules', {
+      params: { include_inactive: includeInactive },
+    });
+  },
+
+  // 获取规则详情
+  getById: (id: number) => {
+    return apiClient.get<any, ApiResponse<any>>(`/api/attendance-rules/${id}`);
+  },
+
+  // 获取默认规则
+  getDefault: () => {
+    return apiClient.get<any, ApiResponse<any>>('/api/attendance-rules/default');
+  },
+
+  // 获取部门规则
+  getByDepartment: (departmentId: number) => {
+    return apiClient.get<any, ApiResponse<any>>(`/api/attendance-rules/department/${departmentId}`);
+  },
+
+  // 获取用户规则
+  getByUser: (userId: number) => {
+    return apiClient.get<any, ApiResponse<any>>(`/api/attendance-rules/user/${userId}`);
+  },
+
+  // 创建规则
+  create: (data: any) => {
+    return apiClient.post<any, ApiResponse<any>>('/api/attendance-rules', data);
+  },
+
+  // 更新规则
+  update: (id: number, data: any) => {
+    return apiClient.put<any, ApiResponse<any>>(`/api/attendance-rules/${id}`, data);
+  },
+
+  // 删除规则
+  delete: (id: number) => {
+    return apiClient.delete<any, ApiResponse>(`/api/attendance-rules/${id}`);
+  },
+
+  // 检查打卡状态
+  checkStatus: (data: any) => {
+    return apiClient.post<any, ApiResponse<any>>('/api/attendance-rules/check', data);
+  },
+};
+
 // 视频流URL
 export const getVideoFeedUrl = () => `${API_BASE_URL}/api/video/feed`;
 

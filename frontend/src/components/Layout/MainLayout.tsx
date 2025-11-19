@@ -15,6 +15,7 @@ import {
   LogoutOutlined,
   DownOutlined,
   ApartmentOutlined,
+  SettingOutlined,
 } from '@ant-design/icons';
 import { useAuthStore } from '../../store/authStore';
 
@@ -66,6 +67,11 @@ const MainLayout = () => {
           key: '/departments',
           icon: <ApartmentOutlined />,
           label: '部门管理',
+        },
+        {
+          key: '/attendance-rules',
+          icon: <SettingOutlined />,
+          label: '考勤规则',
         },
         {
           key: '/history',
