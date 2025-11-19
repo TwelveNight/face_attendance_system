@@ -69,8 +69,11 @@ export default function UserLogin() {
 
         <div className="login-footer">
           <div className="login-links">
-            <a onClick={() => navigate('/admin/login')}>管理员登录</a>
+            <a onClick={() => navigate('/admin/login')}>切换到管理员登录</a>
             <span className="divider">|</span>
+            <a onClick={() => navigate('/attendance')}>直接打卡</a>
+          </div>
+          <div className="login-links" style={{ marginTop: '10px' }}>
             <a onClick={() => navigate('/set-password')}>首次设置密码</a>
           </div>
           <div className="login-tips">

@@ -71,6 +71,14 @@ export default function AdminLogin() {
           <p>默认账号: admin</p>
           <p>默认密码: admin123</p>
         </div>
+
+        <div className="login-footer">
+          <div className="login-links">
+            <a onClick={() => navigate('/login')}>切换到用户登录</a>
+            <span className="divider">|</span>
+            <a onClick={() => navigate('/attendance')}>直接打卡</a>
+          </div>
+        </div>
       </Card>
     </div>
   );

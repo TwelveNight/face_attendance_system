@@ -1,0 +1,18 @@
+.profile-container {
+  padding: 24px;
+}
+
+.security-item {
+  padding: 16px 0;
+}
+
+.security-title {
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.security-desc {
+  color: #999;
+  font-size: 14px;
+}

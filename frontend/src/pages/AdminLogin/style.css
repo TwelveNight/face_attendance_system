@@ -19,11 +19,36 @@
 
 .login-tips {
   text-align: center;
-  margin-top: 20px;
   color: #999;
   font-size: 12px;
+  margin-top: 20px;
 }
 
 .login-tips p {
   margin: 4px 0;
+}
+
+.login-footer {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.login-links {
+  text-align: center;
+}
+
+.login-links a {
+  color: #1890ff;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.login-links a:hover {
+  text-decoration: underline;
+}
+
+.login-links .divider {
+  margin: 0 12px;
+  color: #d9d9d9;
 }

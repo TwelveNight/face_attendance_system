@@ -1,0 +1,7 @@
+.my-attendance-container {
+  padding: 24px;
+}
+
+.my-attendance-container .ant-card {
+  margin-bottom: 16px;
+}

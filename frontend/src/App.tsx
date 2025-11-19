@@ -10,7 +10,9 @@ import Statistics from './pages/Statistics';
 import AdminLogin from './pages/AdminLogin';
 import UserLogin from './pages/UserLogin';
 import SetPassword from './pages/SetPassword';
-import { AdminRoute } from './components/PrivateRoute';
+import MyAttendance from './pages/MyAttendance';
+import Profile from './pages/Profile';
+import { AdminRoute, UserRoute } from './components/PrivateRoute';
 import './App.css';
 
 function App() {
@@ -38,6 +40,10 @@ function App() {
             
             {/* 公开路由 - 考勤打卡 */}
             <Route path="attendance" element={<Attendance />} />
+            
+            {/* 用户路由 - 需要登录 */}
+            <Route path="my-attendance" element={<UserRoute><MyAttendance /></UserRoute>} />
+            <Route path="profile" element={<UserRoute><Profile /></UserRoute>} />
             
             {/* 管理员路由 */}
             <Route path="dashboard" element={<AdminRoute><Dashboard /></AdminRoute>} />
