@@ -2,15 +2,25 @@
  * 统计分析页面
  */
 import { useEffect, useState } from 'react';
-import { Card, Row, Col, Statistic, DatePicker, Space, Spin, Select } from 'antd';
-import { BarChartOutlined } from '@ant-design/icons';
-import { statisticsApi, departmentApi } from '../../api/client';
-import type { Statistics as StatsType, Department } from '../../types';
+import { Card, Row, Col, Statistic, DatePicker, Space, Spin, Select, Progress, Divider } from 'antd';
+import { 
+  BarChartOutlined, 
+  UserOutlined, 
+  CheckCircleOutlined, 
+  ClockCircleOutlined,
+  CloseCircleOutlined,
+  LoginOutlined,
+  LogoutOutlined,
+  TeamOutlined
+} from '@ant-design/icons';
+import { statisticsApi, departmentApi, attendanceApi } from '../../api/client';
+import type { Statistics as StatsType, Department, Attendance } from '../../types';
 import dayjs, { type Dayjs } from 'dayjs';
 
 const Statistics = () => {
   const [loading, setLoading] = useState(false);
   const [dailyStats, setDailyStats] = useState<StatsType | null>(null);
+  const [attendanceList, setAttendanceList] = useState<Attendance[]>([]);
   const [selectedDate, setSelectedDate] = useState<Dayjs>(dayjs());
   const [departmentFilter, setDepartmentFilter] = useState<number | undefined>(undefined);
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -61,8 +71,36 @@ const Statistics = () => {
     setLoading(true);
     try {
       const dateStr = selectedDate.format('YYYY-MM-DD');
-      const response = await statisticsApi.getDailyWithDept(dateStr, departmentFilter);
-      setDailyStats(response.data);
+      
+      // 加载统计数据
+      const statsResponse = await statisticsApi.getDailyWithDept(dateStr, departmentFilter);
+      setDailyStats(statsResponse.data);
+      
+      // 加载当天考勤记录
+      const params: any = {
+        start_date: dateStr,
+        end_date: dateStr,
+        page: 1,
+        per_page: 1000
+      };
+      if (departmentFilter) {
+        params.department_id = departmentFilter;
+      }
+      
+      console.log('🔍 请求参数:', params);
+      const attendanceResponse = await attendanceApi.getHistory(params);
+      console.log('📦 API完整响应:', attendanceResponse);
+      
+      const items = attendanceResponse.data?.items || [];
+      console.log('📊 考勤记录加载:', {
+        日期: dateStr,
+        总数: items.length,
+        上班打卡: items.filter((a: Attendance) => a.check_type === 'checkin').length,
+        下班打卡: items.filter((a: Attendance) => a.check_type === 'checkout').length,
+        示例数据: items.slice(0, 2),
+        完整数据: items
+      });
+      setAttendanceList(items);
     } catch (error) {
       console.error('加载统计数据失败:', error);
     } finally {
@@ -115,68 +153,188 @@ const Statistics = () => {
           </Space>
         }
       >
-        <h3>日期: {selectedDate.format('YYYY年MM月DD日')}</h3>
-
-        {/* 统计卡片 */}
-        <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
+        {/* 基本统计 */}
+        <Divider orientation="left">📊 基本统计 - {selectedDate.format('YYYY年MM月DD日')}</Divider>
+        <Row gutter={[16, 16]}>
           <Col xs={24} sm={12} lg={6}>
-            <Card>
+            <Card hoverable>
               <Statistic
                 title="总打卡次数"
                 value={dailyStats?.total || 0}
+                prefix={<BarChartOutlined />}
                 valueStyle={{ color: '#1890ff' }}
               />
             </Card>
           </Col>
 
           <Col xs={24} sm={12} lg={6}>
-            <Card>
+            <Card hoverable>
               <Statistic
                 title="出勤人数"
                 value={dailyStats?.unique_users || 0}
-                valueStyle={{ color: '#3f8600' }}
+                prefix={<TeamOutlined />}
+                valueStyle={{ color: '#52c41a' }}
               />
             </Card>
           </Col>
 
           <Col xs={24} sm={12} lg={6}>
-            <Card>
+            <Card hoverable>
               <Statistic
                 title="出勤率"
                 value={dailyStats?.attendance_rate || 0}
                 precision={1}
                 suffix="%"
-                valueStyle={{ color: '#cf1322' }}
+                prefix={<UserOutlined />}
+                valueStyle={{ color: '#722ed1' }}
+              />
+              <Progress 
+                percent={dailyStats?.attendance_rate || 0} 
+                strokeColor={{
+                  '0%': '#108ee9',
+                  '100%': '#87d068',
+                }}
+                showInfo={false}
+                style={{ marginTop: 8 }}
+              />
+            </Card>
+          </Col>
+
+          <Col xs={24} sm={12} lg={6}>
+            <Card hoverable>
+              <Statistic
+                title="应到人数"
+                value={Math.ceil((dailyStats?.unique_users || 0) / ((dailyStats?.attendance_rate || 100) / 100))}
+                prefix={<TeamOutlined />}
+                valueStyle={{ color: '#13c2c2' }}
               />
             </Card>
           </Col>
         </Row>
 
-        {/* 状态分布 */}
-        {dailyStats?.status_distribution && (
-          <Card title="考勤状态分布" style={{ marginTop: 24 }}>
-            <Row gutter={16}>
-              {Object.entries(dailyStats.status_distribution).map(([status, count]) => {
-                const statusMap: Record<string, { label: string; color: string }> = {
-                  present: { label: '正常', color: '#3f8600' },
-                  late: { label: '迟到', color: '#faad14' },
-                  absent: { label: '缺勤', color: '#cf1322' },
-                };
-                const info = statusMap[status] || { label: status, color: '#666' };
+        {/* 打卡类型统计 */}
+        <Divider orientation="left">🕒 打卡类型统计</Divider>
+        <Row gutter={[16, 16]}>
+          <Col xs={24} sm={12} lg={6}>
+            <Card hoverable>
+              <Statistic
+                title="上班打卡"
+                value={attendanceList.filter(a => a.check_type === 'checkin').length}
+                prefix={<LoginOutlined />}
+                valueStyle={{ color: '#1890ff' }}
+                suffix="次"
+              />
+            </Card>
+          </Col>
 
-                return (
-                  <Col key={status} xs={24} sm={8}>
-                    <Statistic
-                      title={info.label}
-                      value={count}
-                      valueStyle={{ color: info.color }}
-                    />
-                  </Col>
-                );
-              })}
-            </Row>
-          </Card>
-        )}
+          <Col xs={24} sm={12} lg={6}>
+            <Card hoverable>
+              <Statistic
+                title="下班打卡"
+                value={attendanceList.filter(a => a.check_type === 'checkout').length}
+                prefix={<LogoutOutlined />}
+                valueStyle={{ color: '#722ed1' }}
+                suffix="次"
+              />
+            </Card>
+          </Col>
+
+          <Col xs={24} sm={12} lg={6}>
+            <Card hoverable>
+              <Statistic
+                title="上班打卡率"
+                value={dailyStats?.unique_users ? 
+                  (attendanceList.filter(a => a.check_type === 'checkin').length / dailyStats.unique_users * 100).toFixed(1) 
+                  : 0}
+                suffix="%"
+                valueStyle={{ color: '#52c41a' }}
+              />
+            </Card>
+          </Col>
+
+          <Col xs={24} sm={12} lg={6}>
+            <Card hoverable>
+              <Statistic
+                title="下班打卡率"
+                value={dailyStats?.unique_users ? 
+                  (attendanceList.filter(a => a.check_type === 'checkout').length / dailyStats.unique_users * 100).toFixed(1) 
+                  : 0}
+                suffix="%"
+                valueStyle={{ color: '#13c2c2' }}
+              />
+            </Card>
+          </Col>
+        </Row>
+
+        {/* 考勤状态分布 */}
+        <Divider orientation="left">📋 考勤状态分布</Divider>
+        <Row gutter={[16, 16]}>
+          <Col xs={24} sm={12} lg={6}>
+            <Card hoverable>
+              <Statistic
+                title="正常打卡"
+                value={dailyStats?.status_distribution?.present || 0}
+                prefix={<CheckCircleOutlined />}
+                valueStyle={{ color: '#52c41a' }}
+                suffix="次"
+              />
+              <Progress 
+                percent={dailyStats?.total ? (dailyStats.status_distribution?.present || 0) / dailyStats.total * 100 : 0}
+                strokeColor="#52c41a"
+                showInfo={false}
+                style={{ marginTop: 8 }}
+              />
+            </Card>
+          </Col>
+
+          <Col xs={24} sm={12} lg={6}>
+            <Card hoverable>
+              <Statistic
+                title="迟到次数"
+                value={dailyStats?.status_distribution?.late || 0}
+                prefix={<ClockCircleOutlined />}
+                valueStyle={{ color: '#faad14' }}
+                suffix="次"
+              />
+              <Progress 
+                percent={dailyStats?.total ? (dailyStats.status_distribution?.late || 0) / dailyStats.total * 100 : 0}
+                strokeColor="#faad14"
+                showInfo={false}
+                style={{ marginTop: 8 }}
+              />
+            </Card>
+          </Col>
+
+          <Col xs={24} sm={12} lg={6}>
+            <Card hoverable>
+              <Statistic
+                title="缺勤次数"
+                value={dailyStats?.status_distribution?.absent || 0}
+                prefix={<CloseCircleOutlined />}
+                valueStyle={{ color: '#ff4d4f' }}
+                suffix="次"
+              />
+              <Progress 
+                percent={dailyStats?.total ? (dailyStats.status_distribution?.absent || 0) / dailyStats.total * 100 : 0}
+                strokeColor="#ff4d4f"
+                showInfo={false}
+                style={{ marginTop: 8 }}
+              />
+            </Card>
+          </Col>
+
+          <Col xs={24} sm={12} lg={6}>
+            <Card hoverable>
+              <Statistic
+                title="早退次数"
+                value={attendanceList.filter(a => a.is_early).length}
+                prefix={<ClockCircleOutlined />}
+                valueStyle={{ color: '#fa8c16' }}
+                suffix="次"
+              />
+            </Card>
+          </Col>
+        </Row>
       </Card>
     </div>
   );

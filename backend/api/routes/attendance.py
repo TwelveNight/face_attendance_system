@@ -199,6 +199,10 @@ def get_history():
         if status:
             filters['status'] = status
         
+        check_type = request.args.get('check_type')
+        if check_type:
+            filters['check_type'] = check_type
+        
         department_id = request.args.get('department_id')
         if department_id:
             filters['department_id'] = int(department_id)
@@ -206,8 +210,9 @@ def get_history():
         start_date = request.args.get('start_date')
         end_date = request.args.get('end_date')
         if start_date and end_date:
-            filters['start_date'] = datetime.fromisoformat(start_date)
-            filters['end_date'] = datetime.fromisoformat(end_date)
+            # 确保包含整天的记录：start_date 00:00:00 到 end_date 23:59:59
+            filters['start_date'] = datetime.fromisoformat(start_date).replace(hour=0, minute=0, second=0, microsecond=0)
+            filters['end_date'] = datetime.fromisoformat(end_date).replace(hour=23, minute=59, second=59, microsecond=999999)
         
         # 获取数据
         result = attendance_service.get_attendance_history(filters, page, per_page)

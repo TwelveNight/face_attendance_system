@@ -161,6 +161,8 @@ class AttendanceRepository:
                 query = query.filter_by(user_id=filters['user_id'])
             if 'status' in filters:
                 query = query.filter_by(status=filters['status'])
+            if 'check_type' in filters:
+                query = query.filter_by(check_type=filters['check_type'])
             if 'department_id' in filters:
                 # 筛选指定部门及其所有子部门的用户
                 from database.models_v3 import Department
