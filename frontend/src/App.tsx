@@ -7,6 +7,7 @@ import Attendance from './pages/Attendance';
 import Users from './pages/Users';
 import History from './pages/History';
 import Statistics from './pages/Statistics';
+import SystemLog from './pages/SystemLog';
 import AdminLogin from './pages/AdminLogin';
 import UserLogin from './pages/UserLogin';
 import SetPassword from './pages/SetPassword';
@@ -54,6 +55,7 @@ function App() {
             <Route path="attendance-rules" element={<AdminRoute><AttendanceRules /></AdminRoute>} />
             <Route path="history" element={<AdminRoute><History /></AdminRoute>} />
             <Route path="statistics" element={<AdminRoute><Statistics /></AdminRoute>} />
+            <Route path="system-log" element={<AdminRoute><SystemLog /></AdminRoute>} />
           </Route>
         </Routes>
       </BrowserRouter>

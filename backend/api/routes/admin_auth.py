@@ -6,6 +6,8 @@ from datetime import datetime
 from database.models import db, Admin, AdminLoginLog
 from utils.auth import AuthUtils, admin_required
 from api.middleware import success_response, error_response
+from services.log_service_simple import LogService
+from database import get_db
 
 admin_auth_bp = Blueprint('admin_auth', __name__, url_prefix='/api/admin')
 
@@ -44,17 +46,32 @@ def admin_login():
         
         if not admin:
             # 记录失败日志
-            log_login_attempt(None, request, 'failed', '用户不存在')
+            try:
+                db_session = get_db()
+                log_service = LogService(db_session)
+                log_service.log_admin_login(username, None, False, '用户不存在')
+            except Exception as e:
+                print(f"记录日志失败: {e}")
             return error_response('用户名或密码错误', 401)
         
         # 检查是否启用
         if not admin.is_active:
-            log_login_attempt(admin.id, request, 'failed', '账号已禁用')
+            try:
+                db_session = get_db()
+                log_service = LogService(db_session)
+                log_service.log_admin_login(username, admin.id, False, '账号已禁用')
+            except Exception as e:
+                print(f"记录日志失败: {e}")
             return error_response('账号已禁用', 403)
         
         # 验证密码
         if not AuthUtils.verify_password(password, admin.password_hash):
-            log_login_attempt(admin.id, request, 'failed', '密码错误')
+            try:
+                db_session = get_db()
+                log_service = LogService(db_session)
+                log_service.log_admin_login(username, admin.id, False, '密码错误')
+            except Exception as e:
+                print(f"记录日志失败: {e}")
             return error_response('用户名或密码错误', 401)
         
         # 生成Token
@@ -71,7 +88,12 @@ def admin_login():
         db.session.commit()
         
         # 记录成功日志
-        log_login_attempt(admin.id, request, 'success', None)
+        try:
+            db_session = get_db()
+            log_service = LogService(db_session)
+            log_service.log_admin_login(username, admin.id, True)
+        except Exception as e:
+            print(f"记录日志失败: {e}")
         
         return success_response({
             'token': token,

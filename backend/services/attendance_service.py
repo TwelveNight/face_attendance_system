@@ -14,6 +14,7 @@ from database.models import Attendance
 from config.settings import Config
 from .face_service import FaceService
 from .attendance_rule_service import AttendanceRuleService
+from utils.log_helper import log_system_event, EventType, LogLevel
 
 
 class AttendanceService:
@@ -54,7 +55,14 @@ class AttendanceService:
             result = self.face_service.detect_largest_face_and_recognize(image)
             
             if result is None:
-                print(f"❌ 未检测到人脸")
+                print(f" 未检测到人脸")
+                # 检测失败
+                log_system_event(
+                    event_type='ATTENDANCE_FACE_NOT_DETECTED',
+                    message='打卡失败: 未检测到人脸',
+                    level=LogLevel.WARNING,
+                    module='考勤管理'
+                )
                 return {
                     'success': False,
                     'message': '未检测到人脸'
@@ -63,13 +71,20 @@ class AttendanceService:
             user_id = result['user_id']
             confidence = result['confidence']
             
-            print(f"\n📊 识别结果:")
+            print(f"\n 识别结果:")
             print(f"  - 用户ID: {user_id}")
             print(f"  - 置信度: {confidence:.6f} (完整精度)")
             print(f"  - 置信度: {confidence:.2f} (显示精度)")
             
             if user_id is None:
-                print(f"❌ 未识别到已注册用户 (置信度: {confidence:.6f})")
+                # 识别失败
+                log_system_event(
+                    event_type='ATTENDANCE_RECOGNITION_FAILED',
+                    message=f"人脸识别失败，置信度: {confidence:.2f}",
+                    level=LogLevel.WARNING,
+                    module='考勤管理',
+                    extra_data={'confidence': float(confidence)}
+                )
                 return {
                     'success': False,
                     'message': '未识别到用户',
@@ -157,12 +172,40 @@ class AttendanceService:
                 check_type=check_type  # 使用自动判断的类型
             )
             
-            # 记录日志
-            self.log_repo.create(
-                event_type='check_in',
-                message=f"用户 {user.username} 打卡成功",
-                user_id=user_id
+            # 记录系统日志
+            log_system_event(
+                event_type=EventType.ATTENDANCE_CHECK,
+                message=f"用户 {user.username} 打卡成功 - 类型: {check_type}, 状态: {status}",
+                level=LogLevel.INFO,
+                module='考勤管理',
+                extra_data={
+                    'user_id': user_id,
+                    'username': user.username,
+                    'check_type': check_type,
+                    'status': status,
+                    'is_late': is_late,
+                    'is_early': is_early,
+                    'confidence': float(confidence)
+                }
             )
+            
+            # 如果迟到，记录迟到日志
+            if is_late:
+                log_system_event(
+                    event_type=EventType.ATTENDANCE_LATE,
+                    message=f"用户 {user.username} 迟到打卡",
+                    level=LogLevel.WARNING,
+                    module='考勤管理'
+                )
+            
+            # 如果早退，记录早退日志
+            if is_early:
+                log_system_event(
+                    event_type=EventType.ATTENDANCE_EARLY,
+                    message=f"用户 {user.username} 早退打卡",
+                    level=LogLevel.WARNING,
+                    module='考勤管理'
+                )
             
             print(f"\n✅ 打卡成功:")
             print(f"  - 用户: {user.username}")

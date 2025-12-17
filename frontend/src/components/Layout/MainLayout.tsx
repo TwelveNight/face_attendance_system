@@ -16,6 +16,7 @@ import {
   DownOutlined,
   ApartmentOutlined,
   SettingOutlined,
+  FileTextOutlined,
 } from '@ant-design/icons';
 import { useAuthStore } from '../../store/authStore';
 
@@ -82,6 +83,11 @@ const MainLayout = () => {
           key: '/statistics',
           icon: <BarChartOutlined />,
           label: '统计分析',
+        },
+        {
+          key: '/system-log',
+          icon: <FileTextOutlined />,
+          label: '日志管理',
         },
       ];
     }

@@ -9,6 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from flask import Flask
 from flask_cors import CORS
+from flask_jwt_extended import JWTManager
 import logging
 
 from config.settings import Config
@@ -36,8 +37,18 @@ def create_app():
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = Config.SQLALCHEMY_TRACK_MODIFICATIONS
     app.config['SECRET_KEY'] = Config.SECRET_KEY
     
+    # JWT配置
+    app.config['JWT_SECRET_KEY'] = Config.SECRET_KEY
+    app.config['JWT_TOKEN_LOCATION'] = ['headers']
+    app.config['JWT_HEADER_NAME'] = 'Authorization'
+    app.config['JWT_HEADER_TYPE'] = 'Bearer'
+    app.config['JWT_ACCESS_TOKEN_EXPIRES'] = False  # 设置token不过期
+    
     # 初始化数据库
     db.init_app(app)
+    
+    # 初始化JWT
+    jwt = JWTManager(app)
     
     # CORS
     CORS(app, origins=Config.CORS_ORIGINS, supports_credentials=True)
@@ -86,6 +97,7 @@ def register_blueprints(app):
     from api.routes.department import department_bp
     from api.routes.attendance_rule import attendance_rule_bp
     from api.routes.scheduler import scheduler_bp
+    from api.routes.log import log_bp
     
     # 原有路由
     app.register_blueprint(user_bp, url_prefix='/api/users')
@@ -106,6 +118,9 @@ def register_blueprints(app):
     
     # V3.0 新增：定时任务路由
     app.register_blueprint(scheduler_bp, url_prefix='/api/scheduler')
+    
+    # V3.0 新增：日志管理路由
+    app.register_blueprint(log_bp, url_prefix='/api/log')
     
     app.logger.info("路由注册完成")
 

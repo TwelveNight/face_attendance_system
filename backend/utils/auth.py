@@ -8,6 +8,11 @@ from functools import wraps
 from flask import request, jsonify
 import jwt
 from config.settings import Config
+try:
+    from flask_jwt_extended import create_access_token, get_jwt_identity, verify_jwt_in_request
+    USE_JWT_EXTENDED = True
+except ImportError:
+    USE_JWT_EXTENDED = False
 
 
 class AuthUtils:
@@ -63,6 +68,7 @@ class AuthUtils:
         Returns:
             JWT Token字符串
         """
+        # 使用原生jwt库（确保一致性）
         payload = {
             'user_id': user_id,
             'user_type': user_type,

@@ -1,0 +1,30 @@
+.container {
+  padding: 20px;
+  background-color: #f0f2f5;
+  min-height: calc(100vh - 64px);
+}
+
+.statsRow {
+  margin-bottom: 24px;
+}
+
+.filterRow {
+  margin-bottom: 16px;
+  padding: 16px;
+  background: #fafafa;
+  border-radius: 4px;
+}
+
+.logMessage {
+  max-width: 400px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.userAgent {
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
