@@ -165,7 +165,6 @@ class AttendanceService:
                 user_id=user_id,
                 status=status,
                 confidence=confidence,
-                image_path=image_path,
                 rule_id=rule_id,
                 is_late=is_late,
                 is_early=is_early,
