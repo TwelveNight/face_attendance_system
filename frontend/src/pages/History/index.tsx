@@ -2,8 +2,8 @@
  * 考勤历史页面
  */
 import { useEffect, useState } from 'react';
-import { Table, Card, Space, DatePicker, Select, Button, Tag } from 'antd';
-import { ClockCircleOutlined, DownloadOutlined, ReloadOutlined } from '@ant-design/icons';
+import { Table, Card, Space, DatePicker, Select, Button, Tag, Popconfirm, App } from 'antd';
+import { ClockCircleOutlined, DownloadOutlined, ReloadOutlined, DeleteOutlined } from '@ant-design/icons';
 import { attendanceApi, departmentApi } from '../../api/client';
 import type { Attendance, Department } from '../../types';
 import dayjs, { type Dayjs } from 'dayjs';
@@ -11,6 +11,7 @@ import dayjs, { type Dayjs } from 'dayjs';
 const { RangePicker } = DatePicker;
 
 const History = () => {
+  const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [records, setRecords] = useState<Attendance[]>([]);
   const [total, setTotal] = useState(0);
@@ -113,6 +114,17 @@ const History = () => {
     setDepartmentFilter(undefined);
     setPage(1);
     loadRecords();
+  };
+
+  // 删除记录
+  const handleDelete = async (id: number) => {
+    try {
+      await attendanceApi.deleteAttendance(id);
+      message.success('删除成功');
+      loadRecords();
+    } catch (error: any) {
+      message.error(error.message || '删除失败');
+    }
   };
 
   // 导出CSV
@@ -226,6 +238,30 @@ const History = () => {
       key: 'confidence',
       render: (confidence: number) =>
         confidence ? `${(confidence * 100).toFixed(1)}%` : '-',
+    },
+    {
+      title: '操作',
+      key: 'action',
+      width: 100,
+      render: (_: any, record: Attendance) => (
+        <Popconfirm
+          title="删除确认"
+          description="确定要删除这条考勤记录吗？"
+          onConfirm={() => handleDelete(record.id)}
+          okText="删除"
+          cancelText="取消"
+          okButtonProps={{ danger: true }}
+        >
+          <Button
+            type="link"
+            danger
+            icon={<DeleteOutlined />}
+            size="small"
+          >
+            删除
+          </Button>
+        </Popconfirm>
+      ),
     },
   ];
 
