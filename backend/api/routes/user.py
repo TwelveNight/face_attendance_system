@@ -48,8 +48,9 @@ def get_user(user_id):
 
 @user_bp.route('/register', methods=['POST'])
 @require_json
-def register_user():
-    """注册用户"""
+@admin_required
+def register_user(current_admin=None):
+    """注册用户（需要管理员权限）"""
     try:
         data = request.get_json()
         username = data.get('username')

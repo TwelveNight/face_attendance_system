@@ -56,8 +56,8 @@ backend/
 | 文件 | 路由前缀 | 功能 |
 |------|----------|------|
 | `admin_auth.py` | `/api/admin` | 管理员登录、信息、修改密码 |
-| `user_auth.py` | `/api/auth` | 用户登录、注册、修改密码 |
-| `user.py` | `/api/users` | 用户CRUD、人脸采集 |
+| `user_auth.py` | `/api/auth` | 用户登录、修改密码、设置密码 |
+| `user.py` | `/api/users` | 用户注册(管理员)、CRUD、人脸采集 |
 | `attendance.py` | `/api/attendance` | 打卡、预览、历史、导出 |
 | `attendance_rule.py` | `/api/attendance-rules` | 考勤规则CRUD |
 | `department.py` | `/api/departments` | 部门CRUD、树形结构 |
