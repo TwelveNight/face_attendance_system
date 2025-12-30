@@ -99,27 +99,34 @@ def register_blueprints(app):
     from api.routes.scheduler import scheduler_bp
     from api.routes.log import log_bp
     
-    # 原有路由
+    # ==================== 认证模块 ====================
+    # 管理员认证：登录、登出、密码修改
+    app.register_blueprint(admin_auth_bp)
+    # 用户认证：登录、登出、密码设置与修改
+    app.register_blueprint(user_auth_bp)
+    
+    # ==================== 核心业务模块 ====================
+    # 用户管理：注册、查询、更新、删除用户及人脸数据
     app.register_blueprint(user_bp, url_prefix='/api/users')
+    # 考勤管理：人脸打卡、考勤记录查询、导出
     app.register_blueprint(attendance_bp, url_prefix='/api/attendance')
-    app.register_blueprint(statistics_bp, url_prefix='/api/statistics')
-    app.register_blueprint(video_bp, url_prefix='/api/video')
-    app.register_blueprint(system_bp, url_prefix='/api/system')
-    
-    # V3.0 新增：认证路由
-    app.register_blueprint(admin_auth_bp)  # /api/admin/*
-    app.register_blueprint(user_auth_bp)   # /api/auth/*
-    
-    # V3.0 新增：部门管理路由
-    app.register_blueprint(department_bp)  # /api/departments/*
-    
-    # V3.0 新增：考勤规则路由
+    # 考勤规则：规则配置、分配、统计
     app.register_blueprint(attendance_rule_bp, url_prefix='/api/attendance-rules')
+    # 部门管理：部门增删改查、成员管理
+    app.register_blueprint(department_bp)
     
-    # V3.0 新增：定时任务路由
-    app.register_blueprint(scheduler_bp, url_prefix='/api/scheduler')
-    
-    # V3.0 新增：日志管理路由
+    # ==================== 数据分析模块 ====================
+    # 统计分析：每日/每周/每月考勤统计
+    app.register_blueprint(statistics_bp, url_prefix='/api/statistics')
+    # 日志管理：操作日志、系统日志、登录日志
     app.register_blueprint(log_bp, url_prefix='/api/log')
+    
+    # ==================== 系统功能模块 ====================
+    # 视频流：实时摄像头视频流
+    app.register_blueprint(video_bp, url_prefix='/api/video')
+    # 系统信息：健康检查、GPU状态、模型重载
+    app.register_blueprint(system_bp, url_prefix='/api/system')
+    # 定时任务：缺勤检测配置与手动触发
+    app.register_blueprint(scheduler_bp, url_prefix='/api/scheduler')
     
     app.logger.info("路由注册完成")
