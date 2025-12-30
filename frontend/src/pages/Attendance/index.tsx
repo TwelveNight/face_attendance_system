@@ -322,7 +322,41 @@ const Attendance = () => {
               )}
 
               {/* 实时识别结果显示 */}
-              {capturing && previewResult && (
+              {capturing && previewResult && (() => {
+                // 计算是否太早打卡
+                let isTooEarly = false;
+                let earliestTime = '';
+                if (previewResult.recognized && previewResult.rule && 
+                    previewResult.rule.checkin_before_minutes > 0 &&
+                    previewResult.status_preview?.check_type === 'checkin' &&
+                    !previewResult.rule.is_open_mode) {
+                  const [h, m] = previewResult.rule.work_start_time.split(':');
+                  const totalMinutes = parseInt(h) * 60 + parseInt(m) - previewResult.rule.checkin_before_minutes;
+                  const earliestH = Math.floor(totalMinutes / 60);
+                  const earliestM = totalMinutes % 60;
+                  earliestTime = `${earliestH.toString().padStart(2, '0')}:${earliestM.toString().padStart(2, '0')}`;
+                  
+                  // 获取当前时间
+                  const now = new Date();
+                  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+                  isTooEarly = currentMinutes < totalMinutes;
+                }
+                
+                // 计算背景颜色
+                let bgColor = 'rgba(255, 77, 79, 0.9)'; // 默认红色（未检测到）
+                if (previewResult.recognized) {
+                  if (isTooEarly) {
+                    bgColor = 'rgba(250, 173, 20, 0.95)'; // 黄色（太早打卡）
+                  } else if (previewResult.status_preview?.is_late || previewResult.status_preview?.is_early) {
+                    bgColor = 'rgba(250, 173, 20, 0.95)'; // 黄色（迟到/早退）
+                  } else {
+                    bgColor = 'rgba(82, 196, 26, 0.95)'; // 绿色（正常）
+                  }
+                } else if (previewResult.detected) {
+                  bgColor = 'rgba(250, 173, 20, 0.9)'; // 黄色（检测到但未识别）
+                }
+                
+                return (
                 <div
                   style={{
                     position: 'absolute',
@@ -330,13 +364,7 @@ const Attendance = () => {
                     left: 10,
                     right: 10,
                     padding: '12px 16px',
-                    background: previewResult.recognized 
-                      ? (previewResult.status_preview?.is_late 
-                          ? 'rgba(250, 173, 20, 0.95)' 
-                          : 'rgba(82, 196, 26, 0.95)')
-                      : previewResult.detected 
-                      ? 'rgba(250, 173, 20, 0.9)' 
-                      : 'rgba(255, 77, 79, 0.9)',
+                    background: bgColor,
                     color: '#fff',
                     borderRadius: 8,
                     fontSize: 14,
@@ -388,7 +416,9 @@ const Attendance = () => {
                                   打卡类型: {previewResult.status_preview.check_type_name}打卡
                                 </div>
                               )}
-                              {previewResult.status_preview.is_late ? (
+                              {isTooEarly ? (
+                                <>⚠️ 现在还不能打卡，最早 {earliestTime} 可以打卡</>
+                              ) : previewResult.status_preview.is_late ? (
                                 <>⚠️ 预计状态: 迟到 {previewResult.status_preview.minutes} 分钟</>
                               ) : previewResult.status_preview.is_early ? (
                                 <>⚠️ 预计状态: 早退 {previewResult.status_preview.minutes} 分钟</>
@@ -410,7 +440,7 @@ const Attendance = () => {
                     </div>
                   )}
                 </div>
-              )}
+                );})()}
             </div>
 
             {/* 操作按钮 */}
