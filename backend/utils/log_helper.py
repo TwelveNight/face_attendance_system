@@ -3,7 +3,7 @@
 """
 from functools import wraps
 from typing import Optional, Dict, Any
-from flask import request, g
+from flask import request, g, has_request_context
 try:
     from flask_jwt_extended import get_jwt_identity
 except ImportError:
@@ -12,10 +12,26 @@ except ImportError:
         return None
 
 
+def _get_client_ip() -> Optional[str]:
+    """获取客户端IP地址"""
+    try:
+        if not has_request_context():
+            return None
+        if request.environ.get('HTTP_X_FORWARDED_FOR'):
+            return request.environ['HTTP_X_FORWARDED_FOR'].split(',')[0]
+        elif request.environ.get('HTTP_X_REAL_IP'):
+            return request.environ.get('HTTP_X_REAL_IP')
+        else:
+            return request.environ.get('REMOTE_ADDR', '')
+    except:
+        return None
+
+
 def log_system_event(event_type: str, message: str, level: str = 'INFO',
-                    module: Optional[str] = None, extra_data: Optional[Dict] = None):
+                    module: Optional[str] = None, extra_data: Optional[Dict] = None,
+                    user_id: Optional[int] = None, admin_id: Optional[int] = None):
     """
-    记录系统事件日志（简化版本）
+    记录系统事件日志（写入数据库）
     
     Args:
         event_type: 事件类型
@@ -23,20 +39,36 @@ def log_system_event(event_type: str, message: str, level: str = 'INFO',
         level: 日志级别
         module: 模块名称
         extra_data: 额外数据
+        user_id: 用户ID
+        admin_id: 管理员ID
     """
     try:
         from datetime import datetime
         import json
         
-        # 简单打印日志
+        # 打印到控制台
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         log_message = f"[{timestamp}] [{level}] [{event_type}] {message}"
         if module:
             log_message += f" (模块: {module})"
         if extra_data:
             log_message += f" | 数据: {json.dumps(extra_data, ensure_ascii=False)}"
-        
         print(log_message)
+        
+        # 写入数据库
+        from database.repositories import SystemLogRepository
+        ip_address = _get_client_ip()
+        
+        SystemLogRepository.create(
+            event_type=event_type,
+            message=message,
+            level=level,
+            module=module,
+            user_id=user_id,
+            admin_id=admin_id,
+            ip_address=ip_address,
+            extra_data=json.dumps(extra_data, ensure_ascii=False) if extra_data else None
+        )
         
     except Exception as e:
         print(f"记录日志失败: {e}")

@@ -7,10 +7,11 @@ from typing import List, Optional, Dict
 from pathlib import Path
 import shutil
 
-from database.repositories import UserRepository, SystemLogRepository
+from database.repositories import UserRepository
 from database.models import User
 from config.settings import Config
 from .face_service import FaceService
+from utils.log_helper import log_system_event
 
 
 class UserService:
@@ -19,7 +20,6 @@ class UserService:
     def __init__(self):
         """初始化用户服务"""
         self.user_repo = UserRepository
-        self.log_repo = SystemLogRepository
         self.face_service = FaceService()
     
     def create_user(self, username: str, student_id: Optional[str] = None,
@@ -65,10 +65,11 @@ class UserService:
                 print("⚠️  未提供人脸图像，跳过人脸注册")
             
             # 记录日志
-            self.log_repo.create(
+            log_system_event(
                 event_type='user_created',
                 message=f"创建用户: {username}",
-                user_id=user.id
+                user_id=user.id,
+                module='用户管理'
             )
             
             print(f"✓ 用户创建成功: {username} (ID: {user.id})")
@@ -113,10 +114,11 @@ class UserService:
             user = self.user_repo.update(user_id, **kwargs)
             
             if user:
-                self.log_repo.create(
+                log_system_event(
                     event_type='user_updated',
                     message=f"更新用户: {user.username}",
-                    user_id=user_id
+                    user_id=user_id,
+                    module='用户管理'
                 )
                 print(f"✓ 用户更新成功: {user.username}")
             
@@ -141,10 +143,11 @@ class UserService:
             success = self.face_service.update_user_faces(user_id, face_images)
             
             if success:
-                self.log_repo.create(
+                log_system_event(
                     event_type='user_faces_updated',
                     message=f"更新用户人脸数据",
-                    user_id=user_id
+                    user_id=user_id,
+                    module='用户管理'
                 )
             
             return success
@@ -176,10 +179,11 @@ class UserService:
             if hard_delete:
                 print(f"📝 记录删除日志...")
                 try:
-                    self.log_repo.create(
+                    log_system_event(
                         event_type='user_deleted',
                         message=f"删除用户: {username} (硬删除: True)",
-                        user_id=user_id
+                        user_id=user_id,
+                        module='用户管理'
                     )
                 except Exception as log_error:
                     print(f"⚠️  记录日志失败: {log_error}")
@@ -198,10 +202,11 @@ class UserService:
                 # 软删除后记录日志（用户还在，只是is_active=False）
                 if success:
                     try:
-                        self.log_repo.create(
+                        log_system_event(
                             event_type='user_deleted',
                             message=f"删除用户: {username} (硬删除: False)",
-                            user_id=user_id
+                            user_id=user_id,
+                            module='用户管理'
                         )
                     except Exception as log_error:
                         print(f"⚠️  记录日志失败: {log_error}")

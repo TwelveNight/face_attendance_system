@@ -117,6 +117,9 @@ class SystemLog(db.Model):
     level = db.Column(db.String(20), default='INFO')  # DEBUG, INFO, WARNING, ERROR, CRITICAL
     timestamp = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    admin_id = db.Column(db.Integer, db.ForeignKey('admin.id'), nullable=True)
+    module = db.Column(db.String(50), nullable=True)  # 模块名称
+    ip_address = db.Column(db.String(50), nullable=True)  # IP地址
     extra_data = db.Column(db.Text)  # JSON格式的额外数据
     
     def to_dict(self):
@@ -128,6 +131,9 @@ class SystemLog(db.Model):
             'level': self.level,
             'timestamp': self.timestamp.isoformat() if self.timestamp else None,
             'user_id': self.user_id,
+            'admin_id': self.admin_id,
+            'module': self.module,
+            'ip_address': self.ip_address,
             'extra_data': self.extra_data
         }
     

@@ -177,6 +177,7 @@ class AttendanceService:
                 message=f"用户 {user.username} 打卡成功 - 类型: {check_type}, 状态: {status}",
                 level=LogLevel.INFO,
                 module='考勤管理',
+                user_id=user_id,
                 extra_data={
                     'user_id': user_id,
                     'username': user.username,
@@ -194,7 +195,8 @@ class AttendanceService:
                     event_type=EventType.ATTENDANCE_LATE,
                     message=f"用户 {user.username} 迟到打卡",
                     level=LogLevel.WARNING,
-                    module='考勤管理'
+                    module='考勤管理',
+                    user_id=user_id
                 )
             
             # 如果早退，记录早退日志
@@ -203,7 +205,8 @@ class AttendanceService:
                     event_type=EventType.ATTENDANCE_EARLY,
                     message=f"用户 {user.username} 早退打卡",
                     level=LogLevel.WARNING,
-                    module='考勤管理'
+                    module='考勤管理',
+                    user_id=user_id
                 )
             
             print(f"\n✅ 打卡成功:")
