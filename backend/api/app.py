@@ -123,20 +123,3 @@ def register_blueprints(app):
     app.register_blueprint(log_bp, url_prefix='/api/log')
     
     app.logger.info("路由注册完成")
-
-
-if __name__ == '__main__':
-    app = create_app()
-    
-    print("=" * 60)
-    print("人脸识别考勤系统 API 服务器")
-    print("=" * 60)
-    print(f"地址: http://{Config.API_HOST}:{Config.API_PORT}")
-    print("按 Ctrl+C 停止服务器")
-    print("=" * 60)
-    
-    app.run(
-        host=Config.API_HOST,
-        port=Config.API_PORT,
-        debug=Config.API_DEBUG
-    )
