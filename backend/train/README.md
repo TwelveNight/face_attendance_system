@@ -1,6 +1,6 @@
 # 训练模块
 
-本目录包含所有模型的训练脚本,统一使用PyTorch框架。
+本目录包含人脸识别考勤系统的模型训练脚本。
 
 ## 模块结构
 
@@ -16,25 +16,11 @@ train/
 │   ├── data.yaml               # 数据配置
 │   └── data/                   # 训练数据
 │
-├── train_facenet/              # FaceNet人脸识别训练
-│   ├── collect_faces.py        # 采集人脸(使用YOLO)
-│   ├── train.py                # 训练SVM分类器
-│   ├── test.py                 # 测试脚本
-│   └── dataset/                # 人脸数据集
-│
-├── train_emotion_pytorch/      # PyTorch情绪识别训练
-│   ├── model.py                # CNN模型定义
-│   ├── dataset.py              # 数据集加载
-│   ├── train.py                # 训练脚本
-│   ├── test.py                 # 测试脚本
-│   └── data/                   # 情绪数据
-│
-└── train_emotion_sklearn/      # Sklearn情绪识别训练
-    ├── utils.py                # MediaPipe特征提取
-    ├── data.py                 # 数据准备
-    ├── train.py                # 训练SVM
+└── train_facenet/              # FaceNet人脸识别训练
+    ├── collect_faces.py        # 采集人脸(使用YOLO)
+    ├── train.py                # 训练SVM分类器
     ├── test.py                 # 测试脚本
-    └── data/                   # 情绪图像数据
+    └── dataset/                # 人脸数据集
 ```
 
 ## 训练流程
@@ -67,37 +53,6 @@ python test.py
 - `../../saved_models/facenet_embeddings.npz`
 - `../../saved_models/facenet_svm.pkl`
 
-### 3. PyTorch情绪识别
-
-```bash
-cd train_emotion_pytorch
-
-# 训练
-python train.py
-
-# 测试
-python test.py
-```
-
-训练完成后,模型保存到 `../../saved_models/emotion_cnn.pth`
-
-### 4. Sklearn情绪识别
-
-```bash
-cd train_emotion_sklearn
-
-# 步骤1: 准备数据
-python data.py
-
-# 步骤2: 训练
-python train.py
-
-# 步骤3: 测试
-python test.py
-```
-
-训练完成后,模型保存到 `../../saved_models/emotion_svm.pkl`
-
 ## 数据准备
 
 ### YOLO训练数据
@@ -118,28 +73,13 @@ train_facenet/dataset/
 │   └── ...
 ```
 
-### 情绪训练数据
-
-按情绪类别组织:
-
-```
-train_emotion_*/data/
-├── happy/
-│   ├── img1.jpg
-│   └── ...
-├── sad/
-│   └── ...
-└── surprised/
-    └── ...
-```
-
 ## 注意事项
 
-1. **统一使用YOLO**: 所有需要人脸检测的地方都使用YOLO,移除了MTCNN依赖
-2. **统一使用PyTorch**: 情绪识别从TensorFlow迁移到PyTorch
-3. **配置引用**: 所有脚本都引用 `config.settings` 中的配置
-4. **日志记录**: 训练过程有详细的日志输出
-5. **GPU加速**: 自动检测并使用CUDA加速
+1. **统一使用YOLO**: 所有人脸检测都使用YOLOv8,确保检测一致性
+2. **配置引用**: 所有脚本都引用 `config.settings` 中的配置
+3. **日志记录**: 训练过程有详细的日志输出
+4. **GPU加速**: 自动检测并使用CUDA加速
+5. **数据质量**: 确保训练数据质量,人脸图像清晰、角度多样
 
 ## 模型评估
 
