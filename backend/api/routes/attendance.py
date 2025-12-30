@@ -59,7 +59,7 @@ def preview_recognition():
             })
         
         # 获取用户信息
-        from database.repositories import UserRepository
+        from database.repositories import UserRepository, AttendanceRepository
         from services.attendance_rule_service import AttendanceRuleService
         from datetime import datetime
         
@@ -76,14 +76,26 @@ def preview_recognition():
         rule_service = AttendanceRuleService()
         rule = rule_service.get_rule_for_user(user_id)
         
+        # 查询今天的打卡记录
+        today_records = AttendanceRepository.get_today(user_id)
+        has_checkin = any(r.check_type == 'checkin' for r in today_records)
+        has_checkout = any(r.check_type == 'checkout' for r in today_records)
+        
         # 预测打卡状态（自动判断上班/下班）
         status_info = None
         check_type_name = None
+        already_checked = False
         if rule:
             check_time = datetime.now()
             # 自动判断打卡类型
             check_type = rule_service.determine_checkin_type(rule, check_time)
             check_type_name = '上班' if check_type == 'checkin' else '下班'
+            
+            # 检查是否已打过该类型的卡
+            if check_type == 'checkin' and has_checkin:
+                already_checked = True
+            elif check_type == 'checkout' and has_checkout:
+                already_checked = True
             
             status_result = rule_service.check_attendance_status(rule, check_time, check_type)
             status_info = {
@@ -93,7 +105,8 @@ def preview_recognition():
                 'minutes': status_result.get('minutes', 0),
                 'message': status_result['message'],
                 'check_type': check_type,
-                'check_type_name': check_type_name
+                'check_type_name': check_type_name,
+                'already_checked': already_checked
             }
         
         # 返回识别结果

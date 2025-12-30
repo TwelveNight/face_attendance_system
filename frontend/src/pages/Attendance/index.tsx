@@ -326,6 +326,8 @@ const Attendance = () => {
                 // 计算是否太早打卡
                 let isTooEarly = false;
                 let earliestTime = '';
+                const alreadyChecked = previewResult.status_preview?.already_checked || false;
+                
                 if (previewResult.recognized && previewResult.rule && 
                     previewResult.rule.checkin_before_minutes > 0 &&
                     previewResult.status_preview?.check_type === 'checkin' &&
@@ -345,7 +347,9 @@ const Attendance = () => {
                 // 计算背景颜色
                 let bgColor = 'rgba(255, 77, 79, 0.9)'; // 默认红色（未检测到）
                 if (previewResult.recognized) {
-                  if (isTooEarly) {
+                  if (alreadyChecked) {
+                    bgColor = 'rgba(24, 144, 255, 0.95)'; // 蓝色（已打卡）
+                  } else if (isTooEarly) {
                     bgColor = 'rgba(250, 173, 20, 0.95)'; // 黄色（太早打卡）
                   } else if (previewResult.status_preview?.is_late || previewResult.status_preview?.is_early) {
                     bgColor = 'rgba(250, 173, 20, 0.95)'; // 黄色（迟到/早退）
@@ -416,7 +420,9 @@ const Attendance = () => {
                                   打卡类型: {previewResult.status_preview.check_type_name}打卡
                                 </div>
                               )}
-                              {isTooEarly ? (
+                              {alreadyChecked ? (
+                                <>✓ 今日{previewResult.status_preview.check_type_name}卡已打</>
+                              ) : isTooEarly ? (
                                 <>⚠️ 现在还不能打卡，最早 {earliestTime} 可以打卡</>
                               ) : previewResult.status_preview.is_late ? (
                                 <>⚠️ 预计状态: 迟到 {previewResult.status_preview.minutes} 分钟</>
