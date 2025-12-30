@@ -92,22 +92,11 @@ const SystemLogPage: React.FC = () => {
   const [eventType, setEventType] = useState<string>('');
   const [level, setLevel] = useState<string>('');
   const [module, setModule] = useState<string>('');
-  const [searchText, setSearchText] = useState<string>('');
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 20,
     total: 0
   });
-
-  useEffect(() => {
-    if (activeTab === 'system') {
-      loadSystemLogs();
-      loadSystemStats();
-    } else if (activeTab === 'login') {
-      loadLoginLogs();
-      loadLoginStats();
-    }
-  }, [activeTab, pagination.current, dateRange, eventType, level, module]);
 
   // 加载系统日志
   const loadSystemLogs = async () => {
@@ -126,15 +115,13 @@ const SystemLogPage: React.FC = () => {
       if (level) params.level = level;
       if (module) params.module = module;
       
-      const response = await logApi.getSystemLogs(params);
-      if (response.success) {
-        setSystemLogs(response.data.logs || []);
-        setPagination({
-          ...pagination,
-          total: response.data.total
-        });
-      }
-    } catch (error) {
+      const response: any = await logApi.getSystemLogs(params);
+      setSystemLogs(response.data?.logs || []);
+      setPagination(prev => ({
+        ...prev,
+        total: response.data?.total || 0
+      }));
+    } catch {
       message.error('加载系统日志失败');
     } finally {
       setLoading(false);
@@ -155,15 +142,13 @@ const SystemLogPage: React.FC = () => {
         params.end_date = dateRange[1].format('YYYY-MM-DD');
       }
       
-      const response = await logApi.getLoginLogs(params);
-      if (response.success) {
-        setLoginLogs(response.data.logs || []);
-        setPagination({
-          ...pagination,
-          total: response.data.total
-        });
-      }
-    } catch (error) {
+      const response: any = await logApi.getLoginLogs(params);
+      setLoginLogs(response.data?.logs || []);
+      setPagination(prev => ({
+        ...prev,
+        total: response.data?.total || 0
+      }));
+    } catch {
       message.error('加载登录日志失败');
     } finally {
       setLoading(false);
@@ -173,26 +158,44 @@ const SystemLogPage: React.FC = () => {
   // 加载登录统计
   const loadLoginStats = async () => {
     try {
-      const response = await logApi.getLoginStatistics();
-      if (response.success) {
-        setLoginStats(response.data);
-      }
-    } catch (error) {
-      console.error('加载登录统计失败:', error);
+      const response: any = await logApi.getLoginStatistics();
+      setLoginStats(response.data);
+    } catch {
+      console.error('加载登录统计失败');
     }
   };
 
   // 加载系统日志统计
   const loadSystemStats = async () => {
     try {
-      const response = await logApi.getSystemLogStatistics();
-      if (response.success) {
-        setSystemStats(response.data);
-      }
-    } catch (error) {
-      console.error('加载系统日志统计失败:', error);
+      const response: any = await logApi.getSystemLogStatistics();
+      setSystemStats(response.data);
+    } catch {
+      console.error('加载系统日志统计失败');
     }
   };
+
+  // 初始化加载数据
+  useEffect(() => {
+    if (activeTab === 'system') {
+      loadSystemLogs();
+      loadSystemStats();
+    } else if (activeTab === 'login') {
+      loadLoginLogs();
+      loadLoginStats();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
+  // 筛选条件变化时重新加载
+  useEffect(() => {
+    if (activeTab === 'system') {
+      loadSystemLogs();
+    } else if (activeTab === 'login') {
+      loadLoginLogs();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pagination.current, dateRange, eventType, level, module]);
 
   // 清理旧日志
   const handleCleanup = () => {
@@ -204,15 +207,11 @@ const SystemLogPage: React.FC = () => {
       okType: 'danger',
       onOk: async () => {
         try {
-          const response = await logApi.cleanupLogs(90);
-          if (response.success) {
-            message.success(response.data.message);
-            loadSystemLogs();
-            loadLoginLogs();
-          } else {
-            message.error(response.message || '清理失败');
-          }
-        } catch (error) {
+          const response: any = await logApi.cleanupLogs(90);
+          message.success(response.data?.message || '清理成功');
+          loadSystemLogs();
+          loadLoginLogs();
+        } catch {
           message.error('清理失败');
         }
       }
@@ -523,7 +522,6 @@ const SystemLogPage: React.FC = () => {
               <Col span={6}>
                 <Search
                   placeholder="搜索用户名"
-                  onSearch={(value) => setSearchText(value)}
                   style={{ width: '100%' }}
                 />
               </Col>
