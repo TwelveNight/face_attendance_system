@@ -3,7 +3,7 @@
 """
 from flask import Blueprint, request, jsonify
 from database import get_db
-from services.log_service_simple import LogService
+from services.log_service import LogService
 from utils.auth import admin_required
 from datetime import datetime
 

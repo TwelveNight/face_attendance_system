@@ -6,7 +6,7 @@ from datetime import datetime
 from database.models import db, Admin, AdminLoginLog
 from utils.auth import AuthUtils, admin_required
 from api.middleware import success_response, error_response
-from services.log_service_simple import LogService
+from services.log_service import LogService
 from database import get_db
 
 admin_auth_bp = Blueprint('admin_auth', __name__, url_prefix='/api/admin')
