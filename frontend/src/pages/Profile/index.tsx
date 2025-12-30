@@ -4,16 +4,18 @@
  */
 import { useState } from 'react';
 import { Card, Descriptions, Button, Modal, Form, Input, message, Row, Col } from 'antd';
-import { UserOutlined, LockOutlined, EditOutlined } from '@ant-design/icons';
+import { UserOutlined, LockOutlined, EditOutlined, PhoneOutlined, MailOutlined } from '@ant-design/icons';
 import { useAuthStore } from '../../store/authStore';
-import { authApi } from '../../api/client';
+import { authApi, userApi } from '../../api/client';
 import './style.css';
 
 export default function Profile() {
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
-  const { currentUser } = useAuthStore();
+  const [contactForm] = Form.useForm();
+  const { currentUser, fetchCurrentUser } = useAuthStore();
 
   const handleChangePassword = async () => {
     try {
@@ -38,6 +40,33 @@ export default function Profile() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleUpdateContact = async () => {
+    try {
+      const values = await contactForm.validateFields();
+      setLoading(true);
+      await userApi.updateProfile({
+        phone: values.phone || undefined,
+        email: values.email || undefined,
+      });
+      message.success('联系方式更新成功');
+      setIsContactModalOpen(false);
+      // 刷新用户信息
+      await fetchCurrentUser();
+    } catch (error: any) {
+      message.error(error.message || '更新失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const openContactModal = () => {
+    contactForm.setFieldsValue({
+      phone: currentUser?.phone || '',
+      email: currentUser?.email || '',
+    });
+    setIsContactModalOpen(true);
   };
 
   if (!currentUser) {
@@ -76,9 +105,11 @@ export default function Profile() {
               </Descriptions.Item>
               <Descriptions.Item label="邮箱">
                 {currentUser.email || '-'}
+                <Button type="link" size="small" icon={<EditOutlined />} onClick={openContactModal} style={{ marginLeft: 8 }}>修改</Button>
               </Descriptions.Item>
               <Descriptions.Item label="手机号">
                 {currentUser.phone || '-'}
+                <Button type="link" size="small" icon={<EditOutlined />} onClick={openContactModal} style={{ marginLeft: 8 }}>修改</Button>
               </Descriptions.Item>
               <Descriptions.Item label="账号状态">
                 {currentUser.is_active ? '正常' : '禁用'}
@@ -153,6 +184,42 @@ export default function Profile() {
             rules={[{ required: true, message: '请确认密码' }]}
           >
             <Input.Password placeholder="请再次输入新密码" />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* 修改联系方式对话框 */}
+      <Modal
+        title="修改联系方式"
+        open={isContactModalOpen}
+        onOk={handleUpdateContact}
+        onCancel={() => {
+          setIsContactModalOpen(false);
+          contactForm.resetFields();
+        }}
+        confirmLoading={loading}
+        okText="保存"
+        cancelText="取消"
+      >
+        <Form form={contactForm} layout="vertical" style={{ marginTop: 24 }}>
+          <Form.Item
+            label={<><PhoneOutlined /> 手机号</>}
+            name="phone"
+            rules={[
+              { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号' }
+            ]}
+          >
+            <Input placeholder="请输入手机号" maxLength={11} />
+          </Form.Item>
+
+          <Form.Item
+            label={<><MailOutlined /> 邮箱</>}
+            name="email"
+            rules={[
+              { type: 'email', message: '请输入正确的邮箱格式' }
+            ]}
+          >
+            <Input placeholder="请输入邮箱" />
           </Form.Item>
         </Form>
       </Modal>

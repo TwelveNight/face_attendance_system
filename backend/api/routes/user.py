@@ -192,3 +192,43 @@ def get_user_statistics():
     
     except Exception as e:
         return error_response("获取统计失败", 500, str(e))
+
+
+@user_bp.route('/profile', methods=['PUT'])
+@require_json
+def update_profile():
+    """更新个人信息（普通用户只能修改手机号和邮箱）"""
+    try:
+        # 获取当前用户信息
+        user_info = AuthUtils.get_current_user()
+        
+        if user_info.get('user_type') != 'user':
+            return error_response("仅限普通用户使用", 403)
+        
+        user_id = user_info.get('user_id')
+        if not user_id:
+            return error_response("无效的token", 401)
+        
+        data = request.get_json()
+        
+        # 只允许更新手机号和邮箱
+        update_data = {}
+        if 'phone' in data:
+            update_data['phone'] = data['phone']
+        if 'email' in data:
+            update_data['email'] = data['email']
+        
+        if not update_data:
+            return error_response("没有可更新的字段", 400)
+        
+        user = user_service.update_user(user_id, **update_data)
+        
+        if not user:
+            return error_response("更新失败", 400)
+        
+        return success_response(user.to_dict(), "更新成功")
+    
+    except ValueError as e:
+        return error_response(str(e), 401)
+    except Exception as e:
+        return error_response("更新失败", 500, str(e))

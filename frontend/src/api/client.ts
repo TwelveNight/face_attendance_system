@@ -177,6 +177,11 @@ export const userApi = {
   getUserStatistics: () => {
     return apiClient.get<any, ApiResponse<any>>('/api/users/statistics');
   },
+
+  // 更新个人信息（普通用户）
+  updateProfile: (data: { phone?: string; email?: string }) => {
+    return apiClient.put<any, ApiResponse<User>>('/api/users/profile', data);
+  },
 };
 
 // ==================== 考勤管理API ====================
