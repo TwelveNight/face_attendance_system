@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { ConfigProvider, theme } from 'antd';
+import { ConfigProvider, theme, App as AntdApp } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import MainLayout from './components/Layout/MainLayout';
 import Dashboard from './pages/Dashboard';
@@ -15,6 +15,7 @@ import MyAttendance from './pages/MyAttendance';
 import Profile from './pages/Profile';
 import Departments from './pages/Departments';
 import AttendanceRules from './pages/AttendanceRules';
+import SystemConfig from './pages/SystemConfig';
 import { AdminRoute, UserRoute } from './components/PrivateRoute';
 import './App.css';
 
@@ -29,6 +30,7 @@ function App() {
         },
       }}
     >
+      <AntdApp>
       <BrowserRouter>
         <Routes>
           {/* 登录页面（独立路由） */}
@@ -56,9 +58,11 @@ function App() {
             <Route path="history" element={<AdminRoute><History /></AdminRoute>} />
             <Route path="statistics" element={<AdminRoute><Statistics /></AdminRoute>} />
             <Route path="system-log" element={<AdminRoute><SystemLog /></AdminRoute>} />
+            <Route path="system-config" element={<AdminRoute><SystemConfig /></AdminRoute>} />
           </Route>
         </Routes>
       </BrowserRouter>
+      </AntdApp>
     </ConfigProvider>
   );
 }

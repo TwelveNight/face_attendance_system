@@ -160,6 +160,54 @@ def get_current_admin(current_admin):
         return error_response(f'获取失败: {str(e)}', 500)
 
 
+@admin_auth_bp.route('/profile', methods=['PUT'])
+@admin_required
+def update_admin_profile(current_admin):
+    """
+    修改管理员个人信息（用户名）
+    
+    请求头:
+    Authorization: Bearer <token>
+    
+    请求体:
+    {
+        "username": "new_username"
+    }
+    """
+    try:
+        data = request.get_json()
+        new_username = data.get('username')
+        
+        if not new_username:
+            return error_response('用户名不能为空', 400)
+        
+        if len(new_username) < 2 or len(new_username) > 50:
+            return error_response('用户名长度应在2-50个字符之间', 400)
+        
+        admin_id = current_admin['user_id']
+        admin = Admin.query.get(admin_id)
+        
+        if not admin:
+            return error_response('管理员不存在', 404)
+        
+        # 检查用户名是否已被使用
+        if new_username != admin.username:
+            existing = Admin.query.filter_by(username=new_username).first()
+            if existing:
+                return error_response('用户名已被使用', 400)
+        
+        # 更新用户名
+        admin.username = new_username
+        admin.updated_at = datetime.utcnow()
+        db.session.commit()
+        
+        return success_response(admin.to_dict(), '用户名修改成功')
+        
+    except Exception as e:
+        db.session.rollback()
+        return error_response(f'修改失败: {str(e)}', 500)
+
+
 @admin_auth_bp.route('/password', methods=['PUT'])
 @admin_required
 def change_password(current_admin):

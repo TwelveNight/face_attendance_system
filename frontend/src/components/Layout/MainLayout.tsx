@@ -89,6 +89,11 @@ const MainLayout = () => {
           icon: <FileTextOutlined />,
           label: '日志管理',
         },
+        {
+          key: '/system-config',
+          icon: <SettingOutlined />,
+          label: '账户设置',
+        },
       ];
     }
 

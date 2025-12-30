@@ -91,6 +91,13 @@ export const authApi = {
     });
   },
 
+  // 修改管理员用户名
+  updateAdminProfile: (username: string) => {
+    return apiClient.put<any, ApiResponse<any>>('/api/admin/profile', {
+      username,
+    });
+  },
+
   // 普通用户登录
   userLogin: (username: string, password: string) => {
     return apiClient.post<any, ApiResponse<{ token: string; user: User }>>('/api/auth/login', {
