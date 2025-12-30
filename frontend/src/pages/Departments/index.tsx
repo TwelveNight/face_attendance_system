@@ -238,9 +238,6 @@ export default function Departments() {
                 <Descriptions.Item label="排序">
                   {selectedDepartment.sort_order}
                 </Descriptions.Item>
-                <Descriptions.Item label="负责人">
-                  {selectedDepartment.manager_name || '未设置'}
-                </Descriptions.Item>
                 <Descriptions.Item label="状态">
                   <Badge
                     status={selectedDepartment.is_active ? 'success' : 'error'}
