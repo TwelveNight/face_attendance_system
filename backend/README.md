@@ -1,81 +1,155 @@
-# 人脸识别考勤系统 - 后端
-
-## 技术栈
-
-- **框架**: Flask + SQLAlchemy
-- **数据库**: MySQL
-- **人脸检测**: YOLOv8
-- **人脸识别**: FaceNet (facenet-pytorch)
-- **运行环境**: Python 3.10 + CUDA 12.1
-
-## 项目结构
-
-```
-backend/
-├── api/                 # Flask API (入口: run.py)
-├── config/              # 配置 (.env)
-├── database/            # 数据库模型
-├── models/              # AI模型推理
-├── services/            # 业务逻辑
-├── train/               # 模型训练脚本
-├── saved_models/        # 训练好的模型
-└── logs/                # 日志
-```
+# 后端服务
 
 ## 快速开始
 
-### 1. 环境配置
-
 ```powershell
-# 创建环境
+# 1. 创建环境
 conda create -n face_attendance python=3.10 -y
 conda activate face_attendance
 
-# 安装PyTorch (CUDA 12.1)
+# 2. 安装依赖
 pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu121
-
-# 安装facenet-pytorch (不降级PyTorch)
 pip install facenet-pytorch --no-deps
-
-# 安装其他依赖
 pip install -r requirements.txt
-```
 
-### 2. 配置数据库
-
-```powershell
-# 复制配置模板
+# 3. 配置数据库
 cp config/.env.template config/.env
+# 编辑 .env 配置MySQL连接
 
-# 编辑 .env，配置MySQL连接信息
+# 4. 启动服务
+python run.py  # http://localhost:8088
 ```
 
-### 3. 启动服务
+---
 
-```powershell
-python run.py
+## 目录结构
+
+```
+backend/
+├── run.py                 # 启动入口
+├── requirements.txt       # Python依赖
+├── api/                   # API层
+│   ├── app.py            # Flask应用工厂
+│   ├── middleware.py     # 中间件（响应格式、错误处理）
+│   └── routes/           # 路由模块（11个）
+├── services/              # 业务逻辑层（8个服务）
+├── database/              # 数据访问层
+│   ├── models.py         # ORM模型（8张表）
+│   └── repositories.py   # 数据仓库
+├── models/                # AI模型层
+│   ├── yolo_face_detector.py    # YOLO人脸检测
+│   ├── facenet_recognizer.py    # FaceNet人脸识别
+│   └── model_manager.py         # 模型管理器（单例）
+├── utils/                 # 工具函数
+│   └── auth.py           # JWT认证装饰器
+├── config/                # 配置
+│   ├── settings.py       # 配置类
+│   └── .env              # 环境变量
+├── saved_models/          # 模型文件
+└── logs/                  # 日志
 ```
 
-服务地址: http://localhost:8088
+---
 
-## 主要API
+## API路由
 
-| 模块 | 接口 | 说明 |
+| 文件 | 路由前缀 | 功能 |
+|------|----------|------|
+| `admin_auth.py` | `/api/admin` | 管理员登录、信息、修改密码 |
+| `user_auth.py` | `/api/auth` | 用户登录、注册、修改密码 |
+| `user.py` | `/api/users` | 用户CRUD、人脸采集 |
+| `attendance.py` | `/api/attendance` | 打卡、预览、历史、导出 |
+| `attendance_rule.py` | `/api/attendance-rules` | 考勤规则CRUD |
+| `department.py` | `/api/departments` | 部门CRUD、树形结构 |
+| `statistics.py` | `/api/statistics` | 考勤统计、报表导出 |
+| `scheduler.py` | `/api/scheduler` | 定时任务管理 |
+| `log.py` | `/api/log` | 系统日志查询 |
+| `video.py` | `/api/video` | 实时视频流 |
+| `system.py` | `/api/system` | 健康检查、模型状态 |
+
+---
+
+## 业务服务层
+
+| 服务 | 职责 |
+|------|------|
+| `FaceService` | 人脸检测、识别、特征提取、注册 |
+| `UserService` | 用户管理、密码处理 |
+| `AttendanceService` | 打卡处理、历史查询、CSV导出 |
+| `AttendanceRuleService` | 规则管理、迟到/早退判定 |
+| `DepartmentService` | 部门CRUD、树形构建 |
+| `SchedulerService` | 定时任务（缺勤检测） |
+| `LogService` | 系统日志记录 |
+
+---
+
+## 数据模型（8张表）
+
+| 模型 | 表名 | 说明 |
 |------|------|------|
-| 认证 | `POST /api/auth/login` | 用户登录 |
-| 用户 | `POST /api/users/register` | 注册用户 |
-| 考勤 | `POST /api/attendance/check-in` | 人脸打卡 |
-| 考勤 | `GET /api/attendance/history` | 考勤记录 |
-| 规则 | `GET /api/attendance-rules` | 考勤规则 |
-| 部门 | `GET /api/departments` | 部门管理 |
-| 系统 | `GET /api/system/health` | 健康检查 |
+| `User` | `user` | 用户信息 |
+| `Admin` | `admin` | 管理员账号 |
+| `Department` | `department` | 部门（树形） |
+| `AttendanceRule` | `attendance_rule` | 考勤规则 |
+| `Attendance` | `attendance` | 打卡记录 |
+| `AdminLoginLog` | `admin_login_log` | 管理员登录日志 |
+| `SystemLog` | `system_log` | 系统日志 |
+| `Holiday` | `holiday` | 节假日 |
 
-## 模型文件
+---
 
-确保 `saved_models/` 目录包含:
-- `yolov8n-face.pt` - YOLO人脸检测
-- `facenet_embeddings.npz` - FaceNet特征
-- `facenet_svm.pkl` - SVM分类器
+## AI模型
+
+### YOLO人脸检测
+- 模型: `saved_models/yolov8n-face.pt`
+- 阈值: 0.5
+
+### FaceNet人脸识别
+- 模型: InceptionResnetV1 (vggface2)
+- 特征: `saved_models/facenet_embeddings.npz`
+- 分类器: `saved_models/facenet_svm.pkl`
+- 阈值: 0.6
+
+---
+
+## 关键流程
+
+### 打卡流程
+```
+图像 → YOLO检测 → FaceNet识别 → 获取规则 → 判断类型 → 检查限制 → 判定状态 → 保存
+```
+
+### 缺勤检测（每天23:00）
+```
+获取用户 → 遍历规则 → 检查工作日 → 检查打卡 → 生成缺勤记录
+```
+
+---
+
+## 请求响应格式
+
+```json
+// 成功
+{"code": 200, "message": "success", "data": {...}}
+
+// 错误
+{"code": 400, "message": "错误信息", "error": "详情"}
+
+// 分页
+{"code": 200, "data": {"items": [], "total": 100, "page": 1, "pages": 5}}
+```
+
+---
+
+## 认证
+
+| 装饰器 | 说明 |
+|--------|------|
+| `@admin_required` | 需要管理员JWT |
+| `@user_required` | 需要用户JWT |
+| `@login_required` | 需要任意JWT |
+
+---
 
 ## 常见问题
 
@@ -86,7 +160,7 @@ pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu12
 pip install facenet-pytorch --no-deps
 ```
 
-**验证环境:**
+**验证CUDA:**
 ```powershell
 python -c "import torch; print('CUDA:', torch.cuda.is_available())"
 ```
