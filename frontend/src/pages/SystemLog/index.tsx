@@ -28,7 +28,7 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined
 } from '@ant-design/icons';
-import { logApi } from '../../api/log';
+import { logApi } from '../../api/client';
 import dayjs from 'dayjs';
 import styles from './index.module.css';
 

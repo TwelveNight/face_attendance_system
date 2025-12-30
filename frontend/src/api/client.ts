@@ -3,6 +3,7 @@
  * 封装所有后端API调用
  */
 import axios, { type AxiosInstance, AxiosError } from 'axios';
+import { message } from 'antd';
 import type { ApiResponse, User, Attendance, Statistics, CheckInResult, SystemStatus, PaginatedData } from '../types';
 
 // API基础URL
@@ -52,13 +53,51 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => {
     console.log('API响应:', response.config.url, '状态:', response.status);
+    
+    // 如果是二进制数据（如文件下载），直接返回
+    if (response.config.responseType === 'blob') {
+      return response;
+    }
+    
     return response.data;
   },
   (error: AxiosError<ApiResponse>) => {
     console.error('API错误:', error.config?.url, error.response?.status);
     console.error('错误详情:', error.response?.data);
-    const message = error.response?.data?.message || error.message || '请求失败';
-    return Promise.reject(new Error(message));
+    
+    // 处理HTTP错误
+    if (error.response) {
+      const { status, data } = error.response;
+      
+      switch (status) {
+        case 401: {
+          message.error('未授权，请重新登录');
+          // 清除token并跳转到登录页
+          const userType = localStorage.getItem('userType');
+          localStorage.removeItem('token');
+          localStorage.removeItem('userType');
+          // 根据用户类型跳转到对应的登录页
+          window.location.href = userType === 'admin' ? '/admin/login' : '/login';
+          break;
+        }
+        case 403:
+          message.error('无权限访问');
+          break;
+        case 404:
+          message.error('请求的资源不存在');
+          break;
+        case 500:
+          message.error(data?.message || '服务器错误');
+          break;
+        default:
+          message.error(data?.message || `请求失败: ${status}`);
+      }
+    } else if (error.request) {
+      message.error('网络错误，请检查网络连接');
+    }
+    
+    const errorMsg = error.response?.data?.message || error.message || '请求失败';
+    return Promise.reject(new Error(errorMsg));
   }
 );
 
@@ -430,6 +469,52 @@ export const schedulerApi = {
   // 更新定时任务配置
   updateConfig: (hour: number, minute: number) => {
     return apiClient.post<any, ApiResponse<any>>('/api/scheduler/config', { hour, minute });
+  },
+};
+
+// ==================== 日志管理API ====================
+
+export const logApi = {
+  // 获取系统日志
+  getSystemLogs: (params: {
+    page?: number;
+    size?: number;
+    event_type?: string;
+    level?: string;
+    module?: string;
+    user_id?: number;
+    admin_id?: number;
+    start_date?: string;
+    end_date?: string;
+  }) => {
+    return apiClient.get<any, ApiResponse<any>>('/api/log/system-logs', { params });
+  },
+
+  // 获取登录日志
+  getLoginLogs: (params: {
+    page?: number;
+    size?: number;
+    admin_id?: number;
+    start_date?: string;
+    end_date?: string;
+    status?: string;
+  }) => {
+    return apiClient.get<any, ApiResponse<any>>('/api/log/admin/login-logs', { params });
+  },
+
+  // 获取登录统计
+  getLoginStatistics: (days: number = 7) => {
+    return apiClient.get<any, ApiResponse<any>>('/api/log/login-statistics', { params: { days } });
+  },
+
+  // 获取系统日志统计
+  getSystemLogStatistics: (days: number = 7) => {
+    return apiClient.get<any, ApiResponse<any>>('/api/log/system-log-statistics', { params: { days } });
+  },
+
+  // 清理旧日志
+  cleanupLogs: (days: number) => {
+    return apiClient.post<any, ApiResponse<any>>('/api/log/cleanup', { days });
   },
 };
 
