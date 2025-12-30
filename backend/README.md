@@ -1,136 +1,92 @@
-# 情绪考勤系统 - 后端
-
-基于PyTorch的情绪考勤系统后端,提供人脸检测、识别和情绪分析功能。
+# 人脸识别考勤系统 - 后端
 
 ## 技术栈
 
-- **深度学习框架**: PyTorch (统一)
-- **Web框架**: Flask
-- **数据库**: SQLite + SQLAlchemy
+- **框架**: Flask + SQLAlchemy
+- **数据库**: MySQL
 - **人脸检测**: YOLOv8
 - **人脸识别**: FaceNet (facenet-pytorch)
-- **情绪识别**: PyTorch CNN / Sklearn SVM + MediaPipe
+- **运行环境**: Python 3.10 + CUDA 12.1
 
 ## 项目结构
 
 ```
 backend/
-├── config/              # 配置管理
-├── train/               # 训练脚本
-│   ├── common/          # 共享工具
-│   ├── train_yolo/      # YOLO人脸检测训练
-│   ├── train_facenet/   # FaceNet人脸识别训练
-│   ├── train_emotion_pytorch/  # PyTorch情绪识别训练
-│   └── train_emotion_sklearn/  # Sklearn情绪识别训练
-├── models/              # 模型管理(推理)
+├── api/                 # Flask API (入口: run.py)
+├── config/              # 配置 (.env)
+├── database/            # 数据库模型
+├── models/              # AI模型推理
 ├── services/            # 业务逻辑
-├── database/            # 数据库
-├── api/                 # Flask API
+├── train/               # 模型训练脚本
 ├── saved_models/        # 训练好的模型
-├── data/                # 运行时数据
 └── logs/                # 日志
 ```
 
 ## 快速开始
 
-### 1. 安装依赖
+### 1. 环境配置
 
-```bash
-cd backend
+```powershell
+# 创建环境
+conda create -n face_attendance python=3.10 -y
+conda activate face_attendance
+
+# 安装PyTorch (CUDA 12.1)
+pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+
+# 安装facenet-pytorch (不降级PyTorch)
+pip install facenet-pytorch --no-deps
+
+# 安装其他依赖
 pip install -r requirements.txt
 ```
 
-### 2. 配置环境变量
+### 2. 配置数据库
 
-```bash
-cp config/.env.example .env
-# 编辑 .env 文件,根据实际情况修改配置
+```powershell
+# 复制配置模板
+cp config/.env.template config/.env
+
+# 编辑 .env，配置MySQL连接信息
 ```
 
-### 3. 训练模型
+### 3. 启动服务
 
-```bash
-# 训练YOLO人脸检测模型
-cd train/train_yolo
-python train.py
-
-# 训练FaceNet人脸识别模型
-cd train/train_facenet
-python collect_faces.py  # 采集人脸数据
-python train.py          # 训练模型
-
-# 训练PyTorch情绪识别模型
-cd train/train_emotion_pytorch
-python train.py
-
-# 训练Sklearn情绪识别模型
-cd train/train_emotion_sklearn
-python data.py   # 准备数据
-python train.py  # 训练模型
+```powershell
+python run.py
 ```
 
-### 4. 启动API服务
+服务地址: http://localhost:8088
 
-```bash
-cd api
-python app.py
+## 主要API
+
+| 模块 | 接口 | 说明 |
+|------|------|------|
+| 认证 | `POST /api/auth/login` | 用户登录 |
+| 用户 | `POST /api/users/register` | 注册用户 |
+| 考勤 | `POST /api/attendance/check-in` | 人脸打卡 |
+| 考勤 | `GET /api/attendance/history` | 考勤记录 |
+| 规则 | `GET /api/attendance-rules` | 考勤规则 |
+| 部门 | `GET /api/departments` | 部门管理 |
+| 系统 | `GET /api/system/health` | 健康检查 |
+
+## 模型文件
+
+确保 `saved_models/` 目录包含:
+- `yolov8n-face.pt` - YOLO人脸检测
+- `facenet_embeddings.npz` - FaceNet特征
+- `facenet_svm.pkl` - SVM分类器
+
+## 常见问题
+
+**PyTorch被降级?**
+```powershell
+pip uninstall torch torchvision -y
+pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+pip install facenet-pytorch --no-deps
 ```
 
-服务将在 http://localhost:8088 启动
-
-## API文档
-
-### 用户管理
-
-- `POST /api/users/register` - 注册新用户
-- `GET /api/users` - 获取用户列表
-- `DELETE /api/users/:id` - 删除用户
-
-### 考勤管理
-
-- `POST /api/attendance/check-in` - 打卡
-- `GET /api/attendance/history` - 查询历史记录
-- `GET /api/attendance/export` - 导出数据
-
-### 统计分析
-
-- `GET /api/statistics/daily` - 每日统计
-- `GET /api/statistics/emotion-distribution` - 情绪分布
-- `GET /api/statistics/user-trend/:id` - 用户趋势
-
-### 视频流
-
-- `GET /api/video/feed` - 实时视频流
-
-### 系统
-
-- `GET /api/system/health` - 健康检查
-- `GET /api/system/model-status` - 模型状态
-
-## 配置说明
-
-主要配置项在 `config/settings.py`:
-
-- `YOLO_CONFIDENCE_THRESHOLD`: YOLO检测阈值(默认0.5)
-- `DEFAULT_EMOTION_MODEL`: 默认情绪模型(pytorch/sklearn/deepface)
-- `REGISTER_FACE_COUNT`: 注册时采集人脸数量(默认10)
-- `USE_CUDA`: 是否使用GPU加速
-- `EMOTION_CLASSES`: 情绪类别
-
-## 开发指南
-
-### 添加新的情绪类别
-
-1. 准备训练数据
-2. 修改 `config/settings.py` 中的 `EMOTION_CLASSES`
-3. 重新训练情绪识别模型
-
-### 自定义模型
-
-1. 在 `models/` 目录下创建新的模型类
-2. 在 `model_manager.py` 中注册
-3. 在服务层调用
-
-## 许可证
-
-MIT
+**验证环境:**
+```powershell
+python -c "import torch; print('CUDA:', torch.cuda.is_available())"
+```
