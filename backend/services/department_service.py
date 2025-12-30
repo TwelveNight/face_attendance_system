@@ -5,6 +5,7 @@
 from typing import List, Dict, Optional
 from database.models import Department, db
 from sqlalchemy import or_
+from utils.log_helper import log_system_event
 
 
 class DepartmentService:
@@ -124,6 +125,14 @@ class DepartmentService:
         db.session.add(department)
         db.session.commit()
         
+        # 记录日志
+        log_system_event(
+            event_type='department_created',
+            message=f"创建部门: {name}",
+            module='部门管理',
+            extra_data={'department_id': department.id, 'department_name': name}
+        )
+        
         return department
     
     @staticmethod
@@ -177,6 +186,14 @@ class DepartmentService:
         
         db.session.commit()
         
+        # 记录日志
+        log_system_event(
+            event_type='department_updated',
+            message=f"更新部门: {department.name}",
+            module='部门管理',
+            extra_data={'department_id': dept_id, 'updated_fields': list(kwargs.keys())}
+        )
+        
         return department
     
     @staticmethod
@@ -214,8 +231,17 @@ class DepartmentService:
             for user in department.users:
                 user.department_id = None
         
+        dept_name = department.name
         db.session.delete(department)
         db.session.commit()
+        
+        # 记录日志
+        log_system_event(
+            event_type='department_deleted',
+            message=f"删除部门: {dept_name}",
+            module='部门管理',
+            extra_data={'department_id': dept_id, 'department_name': dept_name, 'force': force}
+        )
         
         return True
     

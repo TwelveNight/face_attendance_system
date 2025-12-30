@@ -5,6 +5,7 @@
 from typing import List, Dict, Optional
 from datetime import datetime, time
 from database.models import AttendanceRule, db
+from utils.log_helper import log_system_event
 
 
 class AttendanceRuleService:
@@ -171,6 +172,14 @@ class AttendanceRuleService:
         db.session.add(rule)
         db.session.commit()
         
+        # 记录日志
+        log_system_event(
+            event_type='rule_created',
+            message=f"创建考勤规则: {name}",
+            module='考勤规则管理',
+            extra_data={'rule_id': rule.id, 'rule_name': name}
+        )
+        
         return rule
     
     @staticmethod
@@ -199,6 +208,15 @@ class AttendanceRuleService:
                 setattr(rule, key, value)
         
         db.session.commit()
+        
+        # 记录日志
+        log_system_event(
+            event_type='rule_updated',
+            message=f"更新考勤规则: {rule.name}",
+            module='考勤规则管理',
+            extra_data={'rule_id': rule_id, 'updated_fields': list(kwargs.keys())}
+        )
+        
         return rule
     
     @staticmethod
@@ -220,8 +238,18 @@ class AttendanceRuleService:
         if rule.is_default:
             raise ValueError("不能删除默认规则")
         
+        rule_name = rule.name
         db.session.delete(rule)
         db.session.commit()
+        
+        # 记录日志
+        log_system_event(
+            event_type='rule_deleted',
+            message=f"删除考勤规则: {rule_name}",
+            module='考勤规则管理',
+            extra_data={'rule_id': rule_id, 'rule_name': rule_name}
+        )
+        
         return True
     
     @staticmethod
