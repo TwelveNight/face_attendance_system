@@ -130,8 +130,9 @@ def update_user(user_id, current_admin=None):
 
 @user_bp.route('/<int:user_id>/faces', methods=['POST'])
 @require_json
-def update_user_faces(user_id):
-    """更新用户人脸"""
+@admin_required
+def update_user_faces(user_id, current_admin=None):
+    """更新用户人脸（需要管理员权限）"""
     try:
         data = request.get_json()
         face_images_base64 = data.get('face_images', [])
@@ -185,8 +186,9 @@ def delete_user(user_id, current_admin=None):
 
 
 @user_bp.route('/statistics', methods=['GET'])
-def get_user_statistics():
-    """获取用户统计"""
+@admin_required
+def get_user_statistics(current_admin=None):
+    """获取用户统计（需要管理员权限）"""
     try:
         stats = user_service.get_user_statistics()
         return success_response(stats)

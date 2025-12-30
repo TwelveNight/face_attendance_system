@@ -9,6 +9,7 @@ from datetime import datetime
 
 from services import AttendanceService
 from api.middleware import success_response, error_response, require_json
+from utils.auth import user_required
 
 attendance_bp = Blueprint('attendance', __name__)
 attendance_service = AttendanceService()
@@ -237,9 +238,14 @@ def get_history():
 
 
 @attendance_bp.route('/user/<int:user_id>', methods=['GET'])
-def get_user_attendance(user_id):
-    """获取用户考勤记录"""
+@user_required
+def get_user_attendance(user_id, current_user):
+    """获取用户考勤记录（仅限本人查看）"""
     try:
+        # 验证只能查看自己的考勤记录
+        if current_user['user_id'] != user_id:
+            return error_response("只能查看自己的考勤记录", 403)
+        
         limit = int(request.args.get('limit', 100))
         
         records = attendance_service.get_user_attendance(user_id, limit)
