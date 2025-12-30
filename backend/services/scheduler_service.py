@@ -100,8 +100,7 @@ class SchedulerService:
                             check_type='checkin',
                             is_late=False,
                             is_early=False,
-                            rule_id=rule.id,
-                            notes='系统自动标记：未打卡'
+                            rule_id=rule.id
                         )
                         db.session.add(checkin_absence)
                         
@@ -113,8 +112,7 @@ class SchedulerService:
                             check_type='checkout',
                             is_late=False,
                             is_early=False,
-                            rule_id=rule.id,
-                            notes='系统自动标记：未打卡'
+                            rule_id=rule.id
                         )
                         db.session.add(checkout_absence)
                         
@@ -134,8 +132,7 @@ class SchedulerService:
                                 check_type='checkin',
                                 is_late=False,
                                 is_early=False,
-                                rule_id=rule.id,
-                                notes='系统自动标记：未上班打卡'
+                                rule_id=rule.id
                             )
                             db.session.add(checkin_absence)
                             absence_count += 1
@@ -150,8 +147,7 @@ class SchedulerService:
                                 check_type='checkout',
                                 is_late=False,
                                 is_early=False,
-                                rule_id=rule.id,
-                                notes='系统自动标记：未下班打卡'
+                                rule_id=rule.id
                             )
                             db.session.add(checkout_absence)
                             absence_count += 1

@@ -402,6 +402,25 @@ export const attendanceRuleApi = {
   },
 };
 
+// ==================== 定时任务API ====================
+
+export const schedulerApi = {
+  // 获取定时任务状态
+  getStatus: () => {
+    return apiClient.get<any, ApiResponse<any>>('/api/scheduler/status');
+  },
+
+  // 手动触发缺勤检测
+  triggerAbsenceCheck: () => {
+    return apiClient.post<any, ApiResponse<any>>('/api/scheduler/trigger-absence-check');
+  },
+
+  // 更新定时任务配置
+  updateConfig: (hour: number, minute: number) => {
+    return apiClient.post<any, ApiResponse<any>>('/api/scheduler/config', { hour, minute });
+  },
+};
+
 // 视频流URL
 export const getVideoFeedUrl = () => `${API_BASE_URL}/api/video/feed`;
 
