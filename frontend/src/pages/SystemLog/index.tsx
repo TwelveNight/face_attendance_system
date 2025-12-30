@@ -10,14 +10,13 @@ import {
   Select,
   Space,
   Tag,
-  message,
   Row,
   Col,
   Statistic,
-  Modal,
   Tabs,
   Input,
-  Tooltip
+  Tooltip,
+  App
 } from 'antd';
 import {
   ReloadOutlined,
@@ -82,6 +81,7 @@ interface SystemStats {
 }
 
 const SystemLogPage: React.FC = () => {
+  const { modal, message } = App.useApp();
   const [activeTab, setActiveTab] = useState('system');
   const [systemLogs, setSystemLogs] = useState<SystemLog[]>([]);
   const [loginLogs, setLoginLogs] = useState<LoginLog[]>([]);
@@ -199,7 +199,7 @@ const SystemLogPage: React.FC = () => {
 
   // 清理旧日志
   const handleCleanup = () => {
-    Modal.confirm({
+    modal.confirm({
       title: '清理日志',
       content: '确定要清理90天前的所有日志吗？此操作不可恢复。',
       okText: '确定',
@@ -213,6 +213,56 @@ const SystemLogPage: React.FC = () => {
           loadLoginLogs();
         } catch {
           message.error('清理失败');
+        }
+      }
+    });
+  };
+
+  // 删除系统日志
+  const handleDeleteSystemLog = (logId: number) => {
+    modal.confirm({
+      title: '删除确认',
+      content: '确定要删除这条系统日志吗？',
+      okText: '确定',
+      cancelText: '取消',
+      okType: 'danger',
+      onOk: async () => {
+        try {
+          const response: any = await logApi.deleteSystemLog(logId);
+          if (response.success) {
+            message.success('删除成功');
+            loadSystemLogs();
+            loadSystemStats();
+          } else {
+            message.error(response.message || '删除失败');
+          }
+        } catch {
+          message.error('删除失败');
+        }
+      }
+    });
+  };
+
+  // 删除登录日志
+  const handleDeleteLoginLog = (logId: number) => {
+    modal.confirm({
+      title: '删除确认',
+      content: '确定要删除这条登录日志吗？',
+      okText: '确定',
+      cancelText: '取消',
+      okType: 'danger',
+      onOk: async () => {
+        try {
+          const response: any = await logApi.deleteLoginLog(logId);
+          if (response.success) {
+            message.success('删除成功');
+            loadLoginLogs();
+            loadLoginStats();
+          } else {
+            message.error(response.message || '删除失败');
+          }
+        } catch {
+          message.error('删除失败');
         }
       }
     });
@@ -281,6 +331,21 @@ const SystemLogPage: React.FC = () => {
       key: 'ip_address',
       width: 120,
       render: (ip: string) => ip || '-'
+    },
+    {
+      title: '操作',
+      key: 'action',
+      width: 80,
+      render: (_: any, record: SystemLog) => (
+        <Button
+          type="link"
+          danger
+          size="small"
+          onClick={() => handleDeleteSystemLog(record.id)}
+        >
+          删除
+        </Button>
+      )
     }
   ];
 
@@ -332,6 +397,21 @@ const SystemLogPage: React.FC = () => {
         <Tooltip title={agent}>
           <span>{agent}</span>
         </Tooltip>
+      )
+    },
+    {
+      title: '操作',
+      key: 'action',
+      width: 80,
+      render: (_: any, record: LoginLog) => (
+        <Button
+          type="link"
+          danger
+          size="small"
+          onClick={() => handleDeleteLoginLog(record.id)}
+        >
+          删除
+        </Button>
       )
     }
   ];

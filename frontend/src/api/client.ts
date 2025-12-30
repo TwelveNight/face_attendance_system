@@ -512,6 +512,16 @@ export const logApi = {
     return apiClient.get<any, ApiResponse<any>>('/api/log/system-log-statistics', { params: { days } });
   },
 
+  // 删除单条系统日志
+  deleteSystemLog: (logId: number) => {
+    return apiClient.delete<any, ApiResponse<any>>(`/api/log/system-logs/${logId}`);
+  },
+
+  // 删除单条登录日志
+  deleteLoginLog: (logId: number) => {
+    return apiClient.delete<any, ApiResponse<any>>(`/api/log/admin/login-logs/${logId}`);
+  },
+
   // 清理旧日志
   cleanupLogs: (days: number) => {
     return apiClient.post<any, ApiResponse<any>>('/api/log/cleanup', { days });

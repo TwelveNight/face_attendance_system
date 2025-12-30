@@ -151,11 +151,64 @@ def get_system_log_statistics(current_admin):
         }), 500
 
 
+@log_bp.route('/system-logs/<int:log_id>', methods=['DELETE'])
+@admin_required
+def delete_system_log(current_admin, log_id):
+    """删除单条系统日志"""
+    try:
+        db = get_db()
+        log_service = LogService(db)
+        
+        if log_service.delete_system_log(log_id):
+            return jsonify({
+                'success': True,
+                'message': '删除成功'
+            }), 200
+        else:
+            return jsonify({
+                'success': False,
+                'message': '日志不存在或删除失败'
+            }), 404
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'删除失败: {str(e)}'
+        }), 500
+
+
+@log_bp.route('/admin/login-logs/<int:log_id>', methods=['DELETE'])
+@admin_required
+def delete_login_log(current_admin, log_id):
+    """删除单条登录日志"""
+    try:
+        db = get_db()
+        log_service = LogService(db)
+        
+        if log_service.delete_login_log(log_id):
+            return jsonify({
+                'success': True,
+                'message': '删除成功'
+            }), 200
+        else:
+            return jsonify({
+                'success': False,
+                'message': '日志不存在或删除失败'
+            }), 404
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'删除失败: {str(e)}'
+        }), 500
+
+
 @log_bp.route('/cleanup', methods=['POST'])
 @admin_required
 def cleanup_logs(current_admin):
     """清理旧日志"""
     try:
+        print(f"清理日志请求，管理员: {current_admin}")
         # 管理员权限已经通过装饰器验证
         
         days = request.json.get('days', 90)
@@ -169,7 +222,7 @@ def cleanup_logs(current_admin):
             event_type='LOG_CLEANUP',
             message=f'清理了{deleted_count}条超过{days}天的日志',
             level='INFO',
-            admin_id=current_user.get('id'),
+            admin_id=current_admin.get('id'),
             module='日志管理'
         )
         

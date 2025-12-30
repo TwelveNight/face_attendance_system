@@ -361,6 +361,30 @@ class LogService:
                 'module_stats': []
             }
     
+    def delete_system_log(self, log_id: int) -> bool:
+        """删除单条系统日志"""
+        try:
+            sql = text("DELETE FROM system_log WHERE id = :log_id")
+            result = self.db.execute(sql, {'log_id': log_id})
+            self.db.commit()
+            return result.rowcount > 0
+        except Exception as e:
+            print(f"删除系统日志失败: {e}")
+            self.db.rollback()
+            return False
+    
+    def delete_login_log(self, log_id: int) -> bool:
+        """删除单条登录日志"""
+        try:
+            sql = text("DELETE FROM admin_login_log WHERE id = :log_id")
+            result = self.db.execute(sql, {'log_id': log_id})
+            self.db.commit()
+            return result.rowcount > 0
+        except Exception as e:
+            print(f"删除登录日志失败: {e}")
+            self.db.rollback()
+            return False
+    
     def cleanup_old_logs(self, days: int = 90) -> int:
         """清理旧日志"""
         try:
