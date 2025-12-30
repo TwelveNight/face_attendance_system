@@ -86,13 +86,13 @@ const Statistics = () => {
         `总打卡次数,${dailyStats.total}`,
         `出勤人数,${dailyStats.unique_users}`,
         `出勤率,${dailyStats.attendance_rate}%`,
-        `应到人数,${Math.ceil(dailyStats.unique_users / (dailyStats.attendance_rate / 100))}`,
+        `应到人数,${dailyStats.total_users || 0}`,
         '',
         '打卡类型统计',
-        `上班打卡,${attendanceList.filter(a => a.check_type === 'checkin').length}次`,
-        `下班打卡,${attendanceList.filter(a => a.check_type === 'checkout').length}次`,
-        `上班打卡率,${dailyStats.unique_users ? (attendanceList.filter(a => a.check_type === 'checkin').length / dailyStats.unique_users * 100).toFixed(1) : 0}%`,
-        `下班打卡率,${dailyStats.unique_users ? (attendanceList.filter(a => a.check_type === 'checkout').length / dailyStats.unique_users * 100).toFixed(1) : 0}%`,
+        `上班打卡,${attendanceList.filter(a => a.check_type === 'checkin' && a.status !== 'absent').length}次`,
+        `下班打卡,${attendanceList.filter(a => a.check_type === 'checkout' && a.status !== 'absent').length}次`,
+        `上班打卡率,${dailyStats.total_users ? (attendanceList.filter(a => a.check_type === 'checkin' && a.status !== 'absent').length / dailyStats.total_users * 100).toFixed(1) : 0}%`,
+        `下班打卡率,${dailyStats.total_users ? (attendanceList.filter(a => a.check_type === 'checkout' && a.status !== 'absent').length / dailyStats.total_users * 100).toFixed(1) : 0}%`,
         '',
         '考勤状态分布',
         `正常打卡,${dailyStats.status_distribution?.present || 0}次`,
@@ -139,6 +139,7 @@ const Statistics = () => {
       
       // 加载统计数据
       const statsResponse = await statisticsApi.getDailyWithDept(dateStr, departmentFilter);
+      console.log('后端统计数据:', statsResponse.data);
       setDailyStats(statsResponse.data);
       
       // 加载当天考勤记录
@@ -265,7 +266,7 @@ const Statistics = () => {
             <Card hoverable>
               <Statistic
                 title="应到人数"
-                value={Math.ceil((dailyStats?.unique_users || 0) / ((dailyStats?.attendance_rate || 100) / 100))}
+                value={dailyStats?.total_users || 0}
                 prefix={<TeamOutlined />}
                 valueStyle={{ color: '#13c2c2' }}
               />
@@ -280,7 +281,7 @@ const Statistics = () => {
             <Card hoverable>
               <Statistic
                 title="上班打卡"
-                value={attendanceList.filter(a => a.check_type === 'checkin').length}
+                value={attendanceList.filter(a => a.check_type === 'checkin' && a.status !== 'absent').length}
                 prefix={<LoginOutlined />}
                 valueStyle={{ color: '#1890ff' }}
                 suffix="次"
@@ -292,7 +293,7 @@ const Statistics = () => {
             <Card hoverable>
               <Statistic
                 title="下班打卡"
-                value={attendanceList.filter(a => a.check_type === 'checkout').length}
+                value={attendanceList.filter(a => a.check_type === 'checkout' && a.status !== 'absent').length}
                 prefix={<LogoutOutlined />}
                 valueStyle={{ color: '#722ed1' }}
                 suffix="次"
@@ -304,8 +305,8 @@ const Statistics = () => {
             <Card hoverable>
               <Statistic
                 title="上班打卡率"
-                value={dailyStats?.unique_users ? 
-                  (attendanceList.filter(a => a.check_type === 'checkin').length / dailyStats.unique_users * 100).toFixed(1) 
+                value={dailyStats?.total_users ? 
+                  (attendanceList.filter(a => a.check_type === 'checkin' && a.status !== 'absent').length / dailyStats.total_users * 100).toFixed(1) 
                   : 0}
                 suffix="%"
                 valueStyle={{ color: '#52c41a' }}
@@ -317,8 +318,8 @@ const Statistics = () => {
             <Card hoverable>
               <Statistic
                 title="下班打卡率"
-                value={dailyStats?.unique_users ? 
-                  (attendanceList.filter(a => a.check_type === 'checkout').length / dailyStats.unique_users * 100).toFixed(1) 
+                value={dailyStats?.total_users ? 
+                  (attendanceList.filter(a => a.check_type === 'checkout' && a.status !== 'absent').length / dailyStats.total_users * 100).toFixed(1) 
                   : 0}
                 suffix="%"
                 valueStyle={{ color: '#13c2c2' }}

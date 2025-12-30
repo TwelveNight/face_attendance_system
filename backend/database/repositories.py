@@ -228,23 +228,25 @@ class AttendanceRepository:
         
         records = query.all()
         
-        total = len(records)
         status_count = {}
-        user_count = {}
+        user_count = {}  # 只统计实际打卡（非缺勤）的用户
+        actual_checkin_count = 0  # 实际打卡次数（不含缺勤）
         
         for record in records:
-            # 统计状态
+            # 统计状态分布（包含缺勤）
             status = record.status
             status_count[status] = status_count.get(status, 0) + 1
             
-            # 统计用户
-            user_id = record.user_id
-            user_count[user_id] = user_count.get(user_id, 0) + 1
+            # 只统计实际打卡的记录（排除缺勤）
+            if status != 'absent':
+                actual_checkin_count += 1
+                user_id = record.user_id
+                user_count[user_id] = user_count.get(user_id, 0) + 1
         
         return {
-            'total': total,
-            'status_distribution': status_count,
-            'unique_users': len(user_count),
+            'total': actual_checkin_count,  # 实际打卡次数（不含缺勤）
+            'status_distribution': status_count,  # 状态分布（含缺勤，用于显示缺勤次数）
+            'unique_users': len(user_count),  # 实际出勤人数（不含缺勤）
             'user_attendance': user_count
         }
     

@@ -10,7 +10,7 @@ from pathlib import Path
 import csv
 
 from database.repositories import AttendanceRepository, UserRepository, SystemLogRepository
-from database.models import Attendance
+from database.models import Attendance, User, AttendanceRule, Department
 from config.settings import Config
 from .face_service import FaceService
 from .attendance_rule_service import AttendanceRuleService
@@ -271,6 +271,67 @@ class AttendanceService:
         """获取日期范围内的考勤记录"""
         return self.attendance_repo.get_by_date_range(start_date, end_date, user_id)
     
+    def _count_users_need_checkin(self, date: datetime, dept_ids: Optional[List[int]] = None) -> int:
+        """
+        计算指定日期需要打卡的用户数
+        
+        Args:
+            date: 日期
+            dept_ids: 部门ID列表（可选，用于筛选部门）
+            
+        Returns:
+            需要打卡的用户数
+        """
+        # 获取星期几 (Python: 0=周一, 6=周日; work_days: 0=周一 或 1=周一，需要检查)
+        weekday = date.weekday()
+        
+        # 获取所有启用的考勤规则
+        active_rules = AttendanceRule.query.filter_by(is_active=True).all()
+        
+        # 收集所有有部门规则的部门ID
+        dept_rule_depts = [r.department_id for r in active_rules if r.department_id]
+        
+        user_ids = set()
+        
+        for rule in active_rules:
+            # 检查今天是否是该规则的工作日
+            # work_days格式: '0,1,2,3,4' 或 '1,2,3,4,5' (需要兼容两种格式)
+            work_days_str = rule.work_days or '0,1,2,3,4'
+            work_days = [int(d) for d in work_days_str.split(',') if d.strip()]
+            # 如果work_days使用1-7格式，转换为0-6格式
+            if work_days and max(work_days) > 6:
+                work_days = [d - 1 for d in work_days]
+            if weekday not in work_days:
+                continue
+            
+            # 开放模式不需要强制打卡
+            if rule.is_open_mode:
+                continue
+            
+            # 获取应用此规则的用户
+            if rule.department_id:
+                # 部门规则：获取该部门的用户
+                query = User.query.filter(
+                    User.is_active == True,
+                    User.department_id == rule.department_id
+                )
+            elif rule.is_default:
+                # 默认规则：获取没有专属部门规则的用户
+                query = User.query.filter(User.is_active == True)
+                if dept_rule_depts:
+                    query = query.filter(~User.department_id.in_(dept_rule_depts))
+            else:
+                continue
+            
+            # 如果指定了部门筛选
+            if dept_ids:
+                query = query.filter(User.department_id.in_(dept_ids))
+            
+            for user in query.all():
+                user_ids.add(user.id)
+        
+        return len(user_ids)
+    
     def get_daily_statistics(self, date: Optional[datetime] = None, department_id: Optional[int] = None) -> Dict:
         """
         获取每日统计
@@ -304,13 +365,12 @@ class AttendanceService:
                         get_child_ids(child.id)
                 get_child_ids(dept.id)
                 
-                # 统计这些部门的用户数
-                from database.models import User
-                total_users = User.query.filter(User.department_id.in_(dept_ids), User.is_active == True).count()
+                # 统计这些部门今天需要打卡的用户数
+                total_users = self._count_users_need_checkin(date, dept_ids)
             else:
                 total_users = 0
         else:
-            total_users = self.user_repo.count(active_only=True)
+            total_users = self._count_users_need_checkin(date)
         
         stats['total_users'] = total_users
         stats['attendance_rate'] = (stats['unique_users'] / total_users * 100) if total_users > 0 else 0

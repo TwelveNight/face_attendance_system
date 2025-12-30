@@ -92,6 +92,7 @@ export interface Statistics {
   total: number;
   status_distribution: Record<string, number>;
   unique_users: number;
+  total_users?: number;
   attendance_rate?: number;
   date?: string;
 }
