@@ -42,7 +42,7 @@ npm install && npm start         # http://localhost:3000
 ### 数据库
 - **类型**: MySQL 5.7+
 - **字符集**: UTF8MB4
-- **数据表**: 8张
+- **数据表**: 7张
 
 ## 项目结构
 
