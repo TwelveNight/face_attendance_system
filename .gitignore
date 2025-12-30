@@ -86,3 +86,40 @@ frontend/build/
 QUICK_TEST_GUIDE.md
 TEST_STAGE2.md
 TROUBLESHOOTING_*.md
+
+*.png
+
+# Office文档（Word、Excel、PPT）
+*.doc
+*.docx
+*.xls
+*.xlsx
+*.ppt
+*.pptx
+~$*
+
+# PDF文档（生成的）
+*.pdf
+
+# 备份文件
+*-bak.*
+* copy.*
+*-备份.*
+
+# 数据库迁移临时文件
+backend/database/migrations/
+
+# Python脚本生成文件
+generate_*.py
+
+# 中文命名的Markdown文件（报告文档）
+*、*.md
+智能*.md
+开题*.md
+*报告*.md
+*总结*.md
+*实现*.md
+*设计*.md
+*数据库*.md
+*样例*.md
+*流时报*.md
